@@ -50,6 +50,48 @@
       50%      { opacity: 1;  transform: scale(1.15) rotate(20deg); }
     }
 
+    /* ---------- rainbow + running unicorn ---------- */
+    .rainbow {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      width: 100vw;
+      max-width: 1400px;
+      transform: translateX(-50%);
+      z-index: 0;
+      opacity: .5;
+      pointer-events: none;
+    }
+
+    /* one unicorn gallops along the bottom, turns around and comes back */
+    .unicorn-runner {
+      --w: clamp(84px, 15vw, 210px);
+      position: fixed;
+      bottom: 6px;
+      left: 2vw;
+      width: var(--w);
+      z-index: 0;
+      pointer-events: none;
+      animation: run 16s ease-in-out infinite;
+    }
+    .unicorn {
+      display: block;
+      width: 100%;
+      filter: drop-shadow(0 10px 14px rgba(183, 124, 255, .35));
+      animation: gallop .45s ease-in-out infinite alternate;
+    }
+    @keyframes run {
+      0%    { left: 2vw;                     transform: scaleX(1); }
+      49.5% { left: calc(98vw - var(--w));   transform: scaleX(1); }
+      50%   { left: calc(98vw - var(--w));   transform: scaleX(-1); }
+      99.5% { left: 2vw;                     transform: scaleX(-1); }
+      100%  { left: 2vw;                     transform: scaleX(1); }
+    }
+    @keyframes gallop {
+      from { transform: translateY(0) rotate(-3deg); }
+      to   { transform: translateY(-14px) rotate(3deg); }
+    }
+
     #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 
     main {
@@ -232,6 +274,67 @@
 </head>
 <body>
   <div class="sky" aria-hidden="true"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="unicorn-art" viewBox="-6 -8 212 176">
+      <g stroke="#c9a7ff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <!-- rainbow tail -->
+        <path d="M44 78 C18 72 8 96 14 124" fill="none" stroke="#ff9ec7" stroke-width="9"/>
+        <path d="M44 84 C24 84 18 106 26 130" fill="none" stroke="#c9a7ff" stroke-width="9"/>
+        <path d="M46 90 C32 96 30 116 38 134" fill="none" stroke="#a7d8ff" stroke-width="9"/>
+        <!-- back legs -->
+        <rect x="56" y="100" width="13" height="50" rx="6" fill="#f6efff"/>
+        <rect x="76" y="100" width="13" height="50" rx="6" fill="#f6efff"/>
+        <!-- body -->
+        <ellipse cx="92" cy="90" rx="52" ry="31" fill="#fff"/>
+        <!-- front legs -->
+        <rect x="108" y="100" width="13" height="50" rx="6" fill="#f6efff"/>
+        <rect x="126" y="100" width="13" height="50" rx="6" fill="#fff"/>
+        <!-- hooves -->
+        <g fill="#c9a7ff" stroke="none">
+          <rect x="56" y="142" width="13" height="9" rx="3"/>
+          <rect x="76" y="142" width="13" height="9" rx="3"/>
+          <rect x="108" y="142" width="13" height="9" rx="3"/>
+          <rect x="126" y="142" width="13" height="9" rx="3"/>
+        </g>
+        <!-- neck -->
+        <path d="M112 74 L134 30 L160 38 L144 94 Z" fill="#fff"/>
+        <!-- head + muzzle -->
+        <ellipse cx="154" cy="40" rx="25" ry="17" transform="rotate(22 154 40)" fill="#fff"/>
+        <ellipse cx="172" cy="54" rx="13" ry="10" transform="rotate(22 172 54)" fill="#ffe3f0"/>
+        <!-- ear -->
+        <path d="M140 26 L144 8 L153 25 Z" fill="#fff"/>
+        <!-- golden horn -->
+        <path d="M150 24 L168 -4 L161 28 Z" fill="#ffe08a" stroke="#f2b84b"/>
+        <path d="M156 18 L163 16 M158 10 L165 8" stroke="#f2b84b" stroke-width="2"/>
+        <!-- rainbow mane -->
+        <g stroke="none">
+          <circle cx="138" cy="24" r="9" fill="#ff9ec7"/>
+          <circle cx="131" cy="36" r="9" fill="#ffb36b"/>
+          <circle cx="126" cy="48" r="9" fill="#ffe08a"/>
+          <circle cx="121" cy="60" r="9" fill="#9ee6cf"/>
+          <circle cx="116" cy="72" r="9" fill="#a7d8ff"/>
+          <circle cx="111" cy="83" r="8" fill="#c9a7ff"/>
+        </g>
+        <!-- eye, blush, nostril -->
+        <path d="M152 38 Q157 43 162 38" fill="none" stroke="#5b2a6e" stroke-width="3"/>
+        <circle cx="160" cy="49" r="4.5" fill="#ff9ec7" stroke="none" opacity=".7"/>
+        <circle cx="178" cy="55" r="1.8" fill="#5b2a6e" stroke="none"/>
+      </g>
+    </symbol>
+  </svg>
+  <svg class="rainbow" viewBox="0 0 1000 500" aria-hidden="true">
+    <g fill="none" stroke-width="34">
+      <path d="M 70 500 A 430 430 0 0 1 930 500" stroke="#ff8fa3"/>
+      <path d="M 104 500 A 396 396 0 0 1 896 500" stroke="#ffb36b"/>
+      <path d="M 138 500 A 362 362 0 0 1 862 500" stroke="#ffe08a"/>
+      <path d="M 172 500 A 328 328 0 0 1 828 500" stroke="#9ee6cf"/>
+      <path d="M 206 500 A 294 294 0 0 1 794 500" stroke="#a7d8ff"/>
+      <path d="M 240 500 A 260 260 0 0 1 760 500" stroke="#c9a7ff"/>
+    </g>
+  </svg>
+  <div class="unicorn-runner" aria-hidden="true">
+    <svg class="unicorn" viewBox="-6 -8 212 176"><use href="#unicorn-art"/></svg>
+  </div>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
   <main>
