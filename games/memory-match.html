@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory Match</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 440px; margin: 0 auto; }
+    .mcard { aspect-ratio: 1; perspective: 600px; border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .mcard .inner { position: relative; display: block; width: 100%; height: 100%; transition: transform .4s; transform-style: preserve-3d; }
+    .mcard.flipped .inner, .mcard.matched .inner { transform: rotateY(180deg); }
+    .face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      font-size: clamp(1.6rem, 8vw, 2.6rem);
+    }
+    .cover { background: linear-gradient(135deg, var(--pink), var(--lilac)); color: #fff; box-shadow: 0 5px 0 #b77cff; }
+    .front { background: #fff; border: 3px solid var(--lilac); transform: rotateY(180deg); }
+    .front img { width: 80%; height: 80%; object-fit: contain; }
+    .mcard.matched .front { border-color: var(--mint); background: #effbf6; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🃏 Memory Match</h1>
+    <p class="sub">Flip two cards at a time. Find all the pairs!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <div class="cards" id="cards"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>Every picture goes in twice, then the cards get shuffled. When you flip two, the game checks if they are the same. If not, it waits a moment so you can remember them, then flips them back.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    // Use emoji, OR your own drawings! Put a picture in the games/art folder
+    // and write its name here, like "art/my-cat.png".
+    const PICTURES = ["🦄", "🌈", "🐱", "🍓", "🌸", "⭐", "🐬", "🧁"];
+
+    const $ = id => document.getElementById(id);
+    let open = [], matched = 0, moves = 0, busy = false;
+
+    const isImage = p => /\.(png|jpe?g|gif|webp|svg)$/i.test(p);
+
+    function deal() {
+      $("cards").innerHTML = "";
+      open = [];
+      matched = 0;
+      moves = 0;
+      busy = false;
+      $("feedback").textContent = "";
+      $("again").classList.add("hidden");
+      showScore();
+
+      for (const pic of Lab.shuffle([...PICTURES, ...PICTURES])) {
+        const card = document.createElement("button");
+        card.className = "mcard";
+        card.setAttribute("aria-label", "Hidden card");
+        const front = isImage(pic) ? `<img src="${pic}" alt="">` : pic;
+        card.innerHTML = `<span class="inner"><span class="face cover">?</span><span class="face front">${front}</span></span>`;
+        card.addEventListener("click", () => flip(card, pic));
+        $("cards").appendChild(card);
+      }
+    }
+
+    function flip(card, pic) {
+      if (busy || card.classList.contains("flipped") || card.classList.contains("matched")) return;
+      card.classList.add("flipped");
+      open.push({ card, pic });
+      if (open.length < 2) return;
+
+      moves++;
+      const [a, b] = open;
+      open = [];
+      if (a.pic === b.pic) {
+        a.card.classList.replace("flipped", "matched");
+        b.card.classList.replace("flipped", "matched");
+        matched++;
+        Lab.sound("yes");
+        if (matched === PICTURES.length) finish();
+      } else {
+        busy = true;
+        setTimeout(() => {
+          a.card.classList.remove("flipped");
+          b.card.classList.remove("flipped");
+          busy = false;
+        }, 900);
+      }
+      showScore();
+    }
+
+    function finish() {
+      const { best, isNew } = Lab.best("memory-match", moves, true);
+      Lab.feedback($("feedback"), isNew ? `All pairs in ${moves} moves, your best ever! 🎉` : `All pairs in ${moves} moves! Best: ${best}`, true);
+      Lab.win("memory-match");
+      $("again").classList.remove("hidden");
+    }
+
+    function showScore() { $("score").textContent = `Pairs: ${matched} / ${PICTURES.length} · Moves: ${moves}`; }
+
+    $("again").addEventListener("click", deal);
+    deal();
+  </script>
+</body>
+</html>

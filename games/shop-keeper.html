@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop Keeper</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .item { font-size: 4rem; margin: 0; }
+    .price-tag {
+      display: inline-block;
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: var(--butter);
+      padding: 6px 18px;
+      border-radius: 999px;
+      margin: 4px 0 16px;
+    }
+    .coin {
+      display: inline-grid;
+      place-items: center;
+      border-radius: 50%;
+      font: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--ink);
+      border: 3px solid rgba(91, 42, 110, .25);
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .12);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .coin:active { transform: scale(.92); }
+    .tray {
+      min-height: 92px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+      background: #fff;
+      border: 3px dashed var(--lilac);
+      border-radius: 20px;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    .tray:empty::before { content: "Tap coins to put them here"; color: var(--ink-soft); }
+    .total { font-size: 1.3rem; font-weight: 600; margin: 4px 0 12px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🛒 Shop Keeper</h1>
+    <p class="sub">Pay the exact price with coins!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="item" id="item"></p>
+      <div class="price-tag" id="price"></div>
+      <div class="row" id="coins"></div>
+      <div class="tray" id="tray"></div>
+      <p class="total" id="total"></p>
+      <div class="row">
+        <button class="btn" id="clear">↩️ Start over</button>
+        <button class="btn primary" id="pay">💳 Pay</button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Open the shop again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>Each customer picks a random toy and a random price. Every coin you tap gets added to the total. When you press Pay, the game checks if the total is exactly the price.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    // The coins. Change the labels to your own money if you like!
+    const COINS = [
+      { value: 1,  label: "1¢",  color: "#e0a07a", size: 54 },
+      { value: 5,  label: "5¢",  color: "#dfe3e8", size: 62 },
+      { value: 10, label: "10¢", color: "#eef0f3", size: 50 },
+      { value: 25, label: "25¢", color: "#e6e9ee", size: 70 },
+    ];
+    const money = n => `${n}¢`;
+    const ITEMS = [
+      { emoji: "🍎", name: "apple" },      { emoji: "🧸", name: "teddy bear" },
+      { emoji: "🖍️", name: "crayons" },    { emoji: "🍪", name: "cookie" },
+      { emoji: "🎈", name: "balloon" },    { emoji: "🧃", name: "juice box" },
+      { emoji: "🍭", name: "lollipop" },   { emoji: "📒", name: "notebook" },
+      { emoji: "🦄", name: "unicorn toy" },{ emoji: "🍌", name: "banana" },
+    ];
+    const MOST = 99;       // the most something can cost
+    const CUSTOMERS = 5;   // serve this many to win
+
+    const $ = id => document.getElementById(id);
+    let price = 0, tray = [], served = 0, done = false;
+
+    for (const coin of COINS) $("coins").appendChild(coinButton(coin, () => { tray.push(coin); render(); }));
+
+    function coinButton(coin, onClick) {
+      const b = document.createElement("button");
+      b.className = "coin";
+      b.textContent = coin.label;
+      b.style.width = b.style.height = coin.size + "px";
+      b.style.background = coin.color;
+      b.addEventListener("click", onClick);
+      return b;
+    }
+
+    const total = () => tray.reduce((sum, c) => sum + c.value, 0);
+
+    function newCustomer() {
+      const item = Lab.pick(ITEMS);
+      price = Lab.rand(5, MOST);
+      tray = [];
+      $("item").textContent = item.emoji;
+      $("price").textContent = `${item.name}: ${money(price)}`;
+      $("feedback").textContent = "";
+      render();
+    }
+
+    function render() {
+      $("tray").innerHTML = "";
+      tray.forEach((coin, i) => {
+        $("tray").appendChild(coinButton(coin, () => { tray.splice(i, 1); render(); }));
+      });
+      $("total").textContent = `You're paying: ${money(total())}`;
+      $("score").textContent = `🙂 Customers: ${served} / ${CUSTOMERS}`;
+    }
+
+    $("clear").addEventListener("click", () => { tray = []; render(); });
+
+    $("pay").addEventListener("click", () => {
+      if (done) return;
+      const t = total();
+      if (t === price) {
+        served++;
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), "Exactly right! Thank you! 💖", true);
+        render();
+        if (served === CUSTOMERS) {
+          done = true;
+          Lab.win("shop-keeper");
+          $("again").classList.remove("hidden");
+        } else {
+          setTimeout(newCustomer, 1000);
+        }
+      } else if (t > price) {
+        Lab.sound("no");
+        Lab.shake($("tray"));
+        Lab.feedback($("feedback"), `That's ${money(t - price)} too much. Tap a coin to take it back.`, false);
+      } else {
+        Lab.sound("no");
+        Lab.feedback($("feedback"), `Not enough yet. You need ${money(price - t)} more.`, false);
+      }
+    });
+
+    $("again").addEventListener("click", () => {
+      served = 0;
+      done = false;
+      $("again").classList.add("hidden");
+      newCustomer();
+    });
+
+    newCustomer();
+  </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planet Line-Up</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+    .slot {
+      min-height: 86px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      border: 3px dashed var(--lilac);
+      border-radius: 16px;
+      padding: 6px 2px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .slot .num { display: block; font-size: .85rem; color: var(--ink-soft); }
+    .slot.right { border: 3px solid var(--mint); background: #effbf6; }
+    .slot.wrong { border: 3px solid var(--pink-deep); background: #fff0f6; }
+    .pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 80px; }
+    .chip {
+      font: inherit;
+      color: var(--ink);
+      background: none;
+      border: 0;
+      padding: 4px;
+      cursor: pointer;
+      width: 76px;
+    }
+    .dot { display: block; width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 2px; box-shadow: inset -6px -6px 0 rgba(0, 0, 0, .15); }
+    .chip small { font-size: .9rem; font-weight: 600; }
+    .modes { margin-bottom: 8px; }
+    .scale { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 10px 14px; margin-top: 12px; }
+    .scale div { font-size: .8rem; font-weight: 600; }
+    .scale .dot { margin-bottom: 4px; }
+    .hint { color: var(--ink-soft); margin: 4px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🪐 Planet Line-Up</h1>
+    <p class="sub">Tap the planets to put them in order!</p>
+    <div class="panel">
+      <div class="row modes">
+        <button class="btn picked" data-mode="sun">☀️ From the Sun</button>
+        <button class="btn" data-mode="size">📏 Smallest to biggest</button>
+      </div>
+      <p class="hint" id="hint"></p>
+      <div class="slots" id="slots"></div>
+      <div class="pool" id="pool"></div>
+      <button class="btn primary" id="check">✓ Check</button>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <div id="scaleBox" class="hidden">
+        <p class="sub" style="margin:16px 0 0">Here they are <strong>to scale</strong>. Look how big Jupiter is!</p>
+        <div class="scale" id="scale"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The list of planets is in order from the Sun. For the size game, the computer sorts them by how wide they are in kilometres. The "to scale" picture makes each circle as wide as the real planet, just much smaller!</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // In order from the Sun. km = how wide the planet is.
+    const PLANETS = [
+      { name: "Mercury", color: "#b5a89a", km: 4879 },
+      { name: "Venus",   color: "#e8c27a", km: 12104 },
+      { name: "Earth",   color: "#4f9de0", km: 12742 },
+      { name: "Mars",    color: "#d9653b", km: 6779 },
+      { name: "Jupiter", color: "#d4a373", km: 139820 },
+      { name: "Saturn",  color: "#e9d8a6", km: 116460 },
+      { name: "Uranus",  color: "#8fd3e0", km: 50724 },
+      { name: "Neptune", color: "#4361ee", km: 49244 },
+    ];
+    const HINTS = {
+      sun: "Closest to the Sun goes first. Tip: My Very Excellent Mother Just Served Us Nachos!",
+      size: "The smallest planet goes first.",
+    };
+
+    const $ = id => document.getElementById(id);
+    let mode = "sun", placed = [], pool = [], correct = [];
+
+    function start() {
+      correct = mode === "sun" ? PLANETS : [...PLANETS].sort((a, b) => a.km - b.km);
+      placed = new Array(PLANETS.length).fill(null);
+      pool = Lab.shuffle(PLANETS);
+      $("hint").textContent = HINTS[mode];
+      $("feedback").textContent = "";
+      $("scaleBox").classList.add("hidden");
+      render();
+    }
+
+    function chipHTML(p) { return `<span class="dot" style="background:${p.color}"></span><small>${p.name}</small>`; }
+
+    function render() {
+      $("slots").innerHTML = "";
+      placed.forEach((p, i) => {
+        const slot = document.createElement("button");
+        slot.className = "slot";
+        slot.innerHTML = `<span class="num">${i + 1}</span>${p ? chipHTML(p) : ""}`;
+        slot.addEventListener("click", () => {
+          if (!p) return;
+          placed[i] = null;
+          pool.push(p);
+          render();
+        });
+        $("slots").appendChild(slot);
+      });
+      $("pool").innerHTML = "";
+      pool.forEach(p => {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.innerHTML = chipHTML(p);
+        chip.addEventListener("click", () => {
+          placed[placed.indexOf(null)] = p;
+          pool = pool.filter(x => x !== p);
+          render();
+        });
+        $("pool").appendChild(chip);
+      });
+    }
+
+    $("check").addEventListener("click", () => {
+      if (pool.length) {
+        Lab.feedback($("feedback"), `Put all the planets in first. ${pool.length} to go!`, false);
+        return;
+      }
+      const slots = [...$("slots").children];
+      let rightCount = 0;
+      placed.forEach((p, i) => {
+        const ok = p === correct[i];
+        if (ok) rightCount++;
+        slots[i].classList.add(ok ? "right" : "wrong");
+      });
+      if (rightCount === PLANETS.length) {
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), "Perfect order! 🚀", true);
+        showScale();
+        Lab.win("planet-sizes");
+      } else {
+        Lab.sound("no");
+        Lab.feedback($("feedback"), `${rightCount} are in the right spot. Tap the pink ones to take them out.`, false);
+      }
+    });
+
+    function showScale() {
+      const biggest = Math.max(...PLANETS.map(p => p.km));
+      $("scale").innerHTML = correct.map(p => {
+        const size = Math.max(4, Math.round(p.km / biggest * 130));
+        return `<div><span class="dot" style="background:${p.color};width:${size}px;height:${size}px"></span>${p.name}</div>`;
+      }).join("");
+      $("scaleBox").classList.remove("hidden");
+    }
+
+    document.querySelectorAll("[data-mode]").forEach(btn => btn.addEventListener("click", () => {
+      mode = btn.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("picked", b === btn));
+      start();
+    }));
+
+    start();
+  </script>
+</body>
+</html>

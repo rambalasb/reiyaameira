@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weather Dress-Up</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌦️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .weather { font-size: 4rem; line-height: 1; margin: 0; }
+    .kid { font-size: 4.5rem; line-height: 1; margin: 12px 0 4px; }
+    .outfit { min-height: 3rem; font-size: 2rem; letter-spacing: 4px; margin: 0 0 16px; }
+    .wardrobe { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .wardrobe .btn { padding: 8px 4px; font-size: 1rem; }
+    .wardrobe .btn span { display: block; font-size: 1.8rem; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🌦️ Weather Dress-Up</h1>
+    <p class="sub">Pick the right clothes for the weather!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="weather" id="weatherIcon"></p>
+      <p class="question" id="weatherName" style="font-size:clamp(1.6rem,7vw,2.4rem)"></p>
+      <p class="kid">👧</p>
+      <p class="outfit" id="outfit"></p>
+      <div class="wardrobe" id="wardrobe"></div>
+      <button class="btn primary" id="check">✓ Ready to go outside!</button>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>Each kind of weather has a list of clothes you <em>need</em> and a list of clothes that are silly to wear. The game checks your outfit against both lists.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change: add more clothes or weather!
+    const CLOTHES = {
+      coat:       { emoji: "🧥", name: "coat" },
+      scarf:      { emoji: "🧣", name: "scarf" },
+      gloves:     { emoji: "🧤", name: "gloves" },
+      boots:      { emoji: "👢", name: "boots" },
+      tshirt:     { emoji: "👕", name: "T-shirt" },
+      shorts:     { emoji: "🩳", name: "shorts" },
+      sunglasses: { emoji: "🕶️", name: "sunglasses" },
+      sunhat:     { emoji: "👒", name: "sun hat" },
+      umbrella:   { emoji: "☂️", name: "umbrella" },
+      swimsuit:   { emoji: "🩱", name: "swimsuit" },
+      sandals:    { emoji: "🩴", name: "sandals" },
+    };
+    const WEATHER = [
+      { emoji: "☀️", name: "Hot and sunny",    need: ["sunhat", "shorts"],                   silly: ["coat", "scarf", "gloves", "boots"] },
+      { emoji: "🌧️", name: "Rainy",            need: ["umbrella", "boots"],                  silly: ["sandals", "swimsuit", "sunglasses"] },
+      { emoji: "❄️", name: "Snowy",            need: ["coat", "gloves", "scarf", "boots"],   silly: ["shorts", "sandals", "swimsuit"] },
+      { emoji: "🏖️", name: "Beach day",        need: ["swimsuit", "sunglasses"],             silly: ["coat", "gloves", "scarf", "boots"] },
+      { emoji: "🍂", name: "Windy and chilly", need: ["coat", "scarf"],                      silly: ["shorts", "swimsuit", "sandals", "umbrella"] },
+    ];
+
+    const $ = id => document.getElementById(id);
+    let list = [], turn = 0, wearing = new Set(), current, done = false;
+
+    for (const [id, item] of Object.entries(CLOTHES)) {
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.dataset.id = id;
+      btn.innerHTML = `<span>${item.emoji}</span>${item.name}`;
+      btn.addEventListener("click", () => {
+        wearing.has(id) ? wearing.delete(id) : wearing.add(id);
+        render();
+      });
+      $("wardrobe").appendChild(btn);
+    }
+
+    function start() {
+      list = Lab.shuffle(WEATHER);
+      turn = 0;
+      done = false;
+      $("again").classList.add("hidden");
+      show();
+    }
+
+    function show() {
+      current = list[turn];
+      wearing = new Set();
+      $("weatherIcon").textContent = current.emoji;
+      $("weatherName").textContent = current.name;
+      $("score").textContent = `Day ${turn + 1} of ${list.length}`;
+      $("feedback").textContent = "";
+      render();
+    }
+
+    function render() {
+      $("outfit").textContent = [...wearing].map(id => CLOTHES[id].emoji).join(" ");
+      document.querySelectorAll(".wardrobe .btn").forEach(b => b.classList.toggle("picked", wearing.has(b.dataset.id)));
+    }
+
+    $("check").addEventListener("click", () => {
+      if (done) return;
+      const silly = current.silly.filter(id => wearing.has(id));
+      const missing = current.need.filter(id => !wearing.has(id));
+      const label = id => `${CLOTHES[id].emoji} ${CLOTHES[id].name}`;
+
+      if (silly.length) {
+        Lab.sound("no");
+        Lab.shake($("outfit"));
+        Lab.feedback($("feedback"), `Hmm, ${silly.map(label).join(" and ")} on a ${current.name.toLowerCase()} day? Silly!`, false);
+      } else if (missing.length) {
+        Lab.sound("no");
+        Lab.feedback($("feedback"), `Almost! You'll want: ${missing.map(label).join(", ")}`, false);
+      } else {
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), "Perfect outfit! Have fun outside! 🎉", true);
+        turn++;
+        if (turn < list.length) {
+          setTimeout(show, 1400);
+        } else {
+          done = true;
+          Lab.win("weather-dress-up");
+          $("again").classList.remove("hidden");
+        }
+      }
+    });
+
+    $("again").addEventListener("click", start);
+    start();
+  </script>
+</body>
+</html>

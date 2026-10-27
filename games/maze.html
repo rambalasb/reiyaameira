@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unicorn Maze</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .maze {
+      --n: 6;
+      --w: min(100%, 440px);
+      width: var(--w);
+      aspect-ratio: 1;
+      margin: 0 auto 16px;
+      display: grid;
+      grid-template-columns: repeat(var(--n), 1fr);
+      background: #fff;
+      border-radius: 8px;
+      touch-action: none;
+      user-select: none;
+    }
+    .cell {
+      display: grid;
+      place-items: center;
+      font-size: calc(min(88vw, 440px) / var(--n) * .6);
+      line-height: 1;
+      border: 3px solid transparent;
+    }
+    .cell.t { border-top-color: var(--ink); }
+    .cell.r { border-right-color: var(--ink); }
+    .cell.b { border-bottom-color: var(--ink); }
+    .cell.l { border-left-color: var(--ink); }
+    .cell.trail { background: #ffe9f3; }
+    .pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 8px; justify-content: center; }
+    .pad .btn { padding: 0; font-size: 1.6rem; }
+    .pad .up { grid-column: 2; }
+    .pad .left { grid-column: 1; grid-row: 2; }
+    .pad .down { grid-column: 2; grid-row: 2; }
+    .pad .right { grid-column: 3; grid-row: 2; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🧭 Unicorn Maze</h1>
+    <p class="sub">Help the unicorn get to the rainbow! Use the arrows, your keyboard, or swipe.</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <div class="maze" id="maze"></div>
+      <div class="pad">
+        <button class="btn up" data-dir="up" aria-label="Up">⬆️</button>
+        <button class="btn left" data-dir="left" aria-label="Left">⬅️</button>
+        <button class="btn down" data-dir="down" aria-label="Down">⬇️</button>
+        <button class="btn right" data-dir="right" aria-label="Right">➡️</button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The maze starts as a grid of boxes with all their walls up. The computer wanders from box to box, knocking down walls as it goes, and walks back when it gets stuck. That makes a new maze every time, with exactly one way through!</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const LEVELS = [6, 8, 10];   // how big each maze is
+    const PLAYER = "🦄";
+    const GOAL = "🌈";
+
+    const $ = id => document.getElementById(id);
+    const mazeEl = $("maze");
+    const DIRS = {
+      up:    { dx: 0,  dy: -1, wall: "top",    opposite: "bottom" },
+      right: { dx: 1,  dy: 0,  wall: "right",  opposite: "left" },
+      down:  { dx: 0,  dy: 1,  wall: "bottom", opposite: "top" },
+      left:  { dx: -1, dy: 0,  wall: "left",   opposite: "right" },
+    };
+    let n, cells, cellEls, x, y, level = 0, finished = false;
+
+    function makeMaze(size) {
+      const grid = Array.from({ length: size * size }, () => ({ top: true, right: true, bottom: true, left: true, seen: false }));
+      const at = (cx, cy) => grid[cy * size + cx];
+      const stack = [[0, 0]];
+      at(0, 0).seen = true;
+      while (stack.length) {
+        const [cx, cy] = stack[stack.length - 1];
+        const choices = Object.values(DIRS).filter(d => {
+          const nx = cx + d.dx, ny = cy + d.dy;
+          return nx >= 0 && ny >= 0 && nx < size && ny < size && !at(nx, ny).seen;
+        });
+        if (!choices.length) { stack.pop(); continue; }   // stuck, walk back
+        const d = Lab.pick(choices);
+        at(cx, cy)[d.wall] = false;
+        at(cx + d.dx, cy + d.dy)[d.opposite] = false;
+        at(cx + d.dx, cy + d.dy).seen = true;
+        stack.push([cx + d.dx, cy + d.dy]);
+      }
+      return grid;
+    }
+
+    function startLevel() {
+      n = LEVELS[level];
+      cells = makeMaze(n);
+      x = 0;
+      y = 0;
+      finished = false;
+      mazeEl.style.setProperty("--n", n);
+      mazeEl.innerHTML = "";
+      cellEls = cells.map(c => {
+        const el = document.createElement("div");
+        el.className = "cell" + (c.top ? " t" : "") + (c.right ? " r" : "") + (c.bottom ? " b" : "") + (c.left ? " l" : "");
+        mazeEl.appendChild(el);
+        return el;
+      });
+      cellEls[n * n - 1].textContent = GOAL;
+      $("score").textContent = `Level ${level + 1} of ${LEVELS.length}`;
+      $("feedback").textContent = "";
+      draw();
+    }
+
+    function draw() {
+      cellEls.forEach((el, i) => { if (el.textContent === PLAYER) el.textContent = i === n * n - 1 ? GOAL : ""; });
+      cellEls[y * n + x].classList.add("trail");
+      cellEls[y * n + x].textContent = PLAYER;
+    }
+
+    function move(dirName) {
+      if (finished) return;
+      const d = DIRS[dirName];
+      if (cells[y * n + x][d.wall]) { Lab.shake(mazeEl); return; }  // bumped a wall
+      x += d.dx;
+      y += d.dy;
+      draw();
+      if (x === n - 1 && y === n - 1) {
+        finished = true;
+        level++;
+        Lab.sound("yes");
+        if (level < LEVELS.length) {
+          Lab.feedback($("feedback"), "You found the rainbow! Next maze… 🌈", true);
+          setTimeout(startLevel, 1300);
+        } else {
+          Lab.feedback($("feedback"), "You beat every maze! 🎉", true);
+          Lab.win("maze");
+          $("again").classList.remove("hidden");
+        }
+      }
+    }
+
+    document.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => move(b.dataset.dir)));
+
+    document.addEventListener("keydown", e => {
+      const dir = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" }[e.key];
+      if (!dir) return;
+      e.preventDefault();
+      move(dir);
+    });
+
+    // swiping on the maze
+    let swipeX = 0, swipeY = 0;
+    mazeEl.addEventListener("pointerdown", e => { swipeX = e.clientX; swipeY = e.clientY; });
+    mazeEl.addEventListener("pointerup", e => {
+      const dx = e.clientX - swipeX, dy = e.clientY - swipeY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    });
+
+    $("again").addEventListener("click", () => {
+      level = 0;
+      $("again").classList.add("hidden");
+      startLevel();
+    });
+
+    startLevel();
+  </script>
+</body>
+</html>

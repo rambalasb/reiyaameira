@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sink or Float</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛟</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .tank {
+      position: relative;
+      height: 280px;
+      max-width: 420px;
+      margin: 0 auto 16px;
+      overflow: hidden;
+      border: 4px solid #fff;
+      border-radius: 20px;
+      background: linear-gradient(#fff 0 32%, #a7d8ff 32%, #6fb7f0 100%);
+    }
+    .thing {
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      font-size: 3.5rem;
+      line-height: 1;
+      transform: translateX(-50%);
+      transition: top 1.4s cubic-bezier(.5, 0, .7, 1);
+    }
+    .thing.float { top: calc(32% - 1.6rem); }
+    .thing.sink  { top: calc(100% - 3.8rem); }
+    .thing.float.bob { animation: bob 1.4s ease-in-out infinite; }
+    @keyframes bob { 50% { transform: translateX(-50%) translateY(-6px) rotate(6deg); } }
+    .name { font-size: 1.5rem; font-weight: 700; margin: 0 0 12px; }
+    .why { font-size: 1.1rem; margin: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🛟 Sink or Float?</h1>
+    <p class="sub">Make a guess, then drop it in the water to find out!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="name" id="name"></p>
+      <div class="tank"><div class="thing" id="thing"></div></div>
+      <div class="row" id="guesses">
+        <button class="btn" data-guess="sink">⬇️ It will sink</button>
+        <button class="btn" data-guess="float">🛟 It will float</button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <p class="why" id="why"></p>
+      <button class="btn primary hidden" id="next">Next ➡️</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>Each thing in the list knows if it floats or sinks, and why. When you guess, the picture slides down to the bottom of the tank or stops at the top of the water.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change: add more things to test!
+    const THINGS = [
+      { emoji: "🪨", name: "rock",        floats: false, why: "Rocks are heavy for their size, so they sink." },
+      { emoji: "🪵", name: "log",         floats: true,  why: "Wood has lots of tiny air pockets, so it floats." },
+      { emoji: "🍎", name: "apple",       floats: true,  why: "An apple is about one quarter air, so it bobs on top!" },
+      { emoji: "🔑", name: "key",         floats: false, why: "Keys are made of metal, which sinks." },
+      { emoji: "🦆", name: "rubber duck", floats: true,  why: "It's hollow and full of air." },
+      { emoji: "🪙", name: "coin",        floats: false, why: "A coin is small but very heavy for its size." },
+      { emoji: "🧊", name: "ice cube",    floats: true,  why: "Water gets lighter when it freezes, so ice floats!" },
+      { emoji: "🥚", name: "egg",         floats: false, why: "A fresh egg sinks. A very old egg floats, because air gets inside!" },
+      { emoji: "🍋", name: "lemon",       floats: true,  why: "Lemon peel is full of tiny air bubbles." },
+      { emoji: "⚓", name: "anchor",      floats: false, why: "Anchors are made to sink so boats stay in one place." },
+      { emoji: "🏐", name: "ball",        floats: true,  why: "A ball is full of air." },
+      { emoji: "🍇", name: "grape",       floats: false, why: "Grapes are a little heavier than water, so they sink." },
+      { emoji: "🥄", name: "spoon",       floats: false, why: "Metal spoons sink." },
+      { emoji: "🍃", name: "leaf",        floats: true,  why: "Leaves are thin and light, so they float." },
+    ];
+    const ROUNDS = 8;
+
+    const $ = id => document.getElementById(id);
+    const thingEl = $("thing");
+    let list = [], turn = 0, score = 0, current;
+
+    function start() {
+      list = Lab.shuffle(THINGS).slice(0, ROUNDS);
+      turn = 0;
+      score = 0;
+      show();
+    }
+
+    function show() {
+      current = list[turn];
+      thingEl.style.transition = "none";
+      thingEl.className = "thing";
+      void thingEl.offsetWidth;
+      thingEl.style.transition = "";
+      thingEl.textContent = current.emoji;
+      $("name").textContent = `A ${current.name}`;
+      $("score").textContent = `Thing ${turn + 1} of ${ROUNDS} · ⭐ ${score}`;
+      $("feedback").textContent = "";
+      $("why").textContent = "";
+      $("guesses").classList.remove("hidden");
+      $("next").classList.add("hidden");
+    }
+
+    document.querySelectorAll("[data-guess]").forEach(btn => btn.addEventListener("click", () => {
+      const guessFloat = btn.dataset.guess === "float";
+      $("guesses").classList.add("hidden");
+      thingEl.classList.add(current.floats ? "float" : "sink");
+
+      setTimeout(() => {
+        if (current.floats) thingEl.classList.add("bob");
+        const right = guessFloat === current.floats;
+        if (right) score++;
+        Lab.sound(right ? "yes" : "no");
+        Lab.feedback($("feedback"), `${right ? "You were right!" : "Surprise!"} It ${current.floats ? "floats" : "sinks"}.`, right);
+        $("why").textContent = current.why;
+        $("score").textContent = `Thing ${turn + 1} of ${ROUNDS} · ⭐ ${score}`;
+        $("next").textContent = turn + 1 === ROUNDS ? "Finish 🏁" : "Next ➡️";
+        $("next").classList.remove("hidden");
+      }, 1400);
+    }));
+
+    $("next").addEventListener("click", () => {
+      turn++;
+      if (turn < ROUNDS) return show();
+      $("next").classList.add("hidden");
+      $("name").textContent = `You guessed ${score} out of ${ROUNDS} right! 🔬`;
+      $("feedback").textContent = "";
+      $("why").textContent = "Real scientists guess first too. It's called a hypothesis!";
+      Lab.win("sink-or-float");
+      const again = document.createElement("button");
+      again.className = "btn primary";
+      again.textContent = "Test more things";
+      again.addEventListener("click", () => { again.remove(); start(); });
+      $("why").after(again);
+    });
+
+    start();
+  </script>
+</body>
+</html>

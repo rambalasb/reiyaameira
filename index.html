@@ -50,6 +50,23 @@
       50%      { opacity: 1;  transform: scale(1.15) rotate(20deg); }
     }
 
+    /* ---------- clouds drifting across the sky ---------- */
+    .clouds { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+    .cloud {
+      position: absolute;
+      left: 0;
+      top: var(--top);
+      width: var(--w);
+      opacity: .9;
+      filter: drop-shadow(0 6px 10px rgba(167, 216, 255, .6));
+      animation: drift var(--dur) linear infinite;
+      animation-delay: var(--delay);
+    }
+    @keyframes drift {
+      from { transform: translateX(-110%); }
+      to   { transform: translateX(100vw); }
+    }
+
     /* ---------- rainbow + running unicorn ---------- */
     .rainbow {
       position: fixed;
@@ -221,7 +238,7 @@
 
     h2 { font-size: 1.6rem; margin: 0 0 16px; }
 
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 280px)); justify-content: center; gap: 16px; margin-bottom: 32px; }
 
     .card {
       position: relative;
@@ -250,8 +267,7 @@
       padding: 4px 10px;
       border-radius: 999px;
     }
-    .card.photos { background: linear-gradient(160deg, #fff, #ffe3f0); }
-    .card.movies { background: linear-gradient(160deg, #fff, #e3f0ff); }
+    .card.lab { background: linear-gradient(160deg, #fff, #dff7ee); }
 
     .again {
       font: inherit;
@@ -269,12 +285,22 @@
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; }
+      .cloud { left: var(--x); }
     }
   </style>
 </head>
 <body>
   <div class="sky" aria-hidden="true"></div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="cloud-art" viewBox="0 0 120 60">
+      <g fill="#fff">
+        <circle cx="30" cy="38" r="18"/>
+        <circle cx="55" cy="26" r="24"/>
+        <circle cx="82" cy="32" r="19"/>
+        <circle cx="100" cy="42" r="13"/>
+        <rect x="14" y="38" width="98" height="20" rx="10"/>
+      </g>
+    </symbol>
     <symbol id="unicorn-art" viewBox="-6 -8 212 176">
       <g stroke="#c9a7ff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
         <!-- rainbow tail -->
@@ -332,6 +358,15 @@
       <path d="M 240 500 A 260 260 0 0 1 760 500" stroke="#c9a7ff"/>
     </g>
   </svg>
+  <!-- each cloud: --top = how high, --w = how big, --dur = how slow, --delay = where it starts, --x = where it sits if motion is turned off -->
+  <div class="clouds" aria-hidden="true">
+    <svg class="cloud" style="--top:6%;  --w:180px; --dur:55s; --delay:-5s;  --x:4%"  viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+    <svg class="cloud" style="--top:20%; --w:120px; --dur:70s; --delay:-40s; --x:78%" viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+    <svg class="cloud" style="--top:36%; --w:220px; --dur:60s; --delay:-25s; --x:2%"  viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+    <svg class="cloud" style="--top:50%; --w:150px; --dur:48s; --delay:-12s; --x:82%" viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+    <svg class="cloud" style="--top:12%; --w:100px; --dur:80s; --delay:-60s; --x:60%" viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+    <svg class="cloud" style="--top:62%; --w:170px; --dur:65s; --delay:-50s; --x:8%"  viewBox="0 0 120 60"><use href="#cloud-art"/></svg>
+  </div>
   <div class="unicorn-runner" aria-hidden="true">
     <svg class="unicorn" viewBox="-6 -8 212 176"><use href="#unicorn-art"/></svg>
   </div>
@@ -354,19 +389,12 @@
       <p class="note">It has your name on it, and it belongs to you. Type it into any computer, phone or tablet and your page will be here.</p>
 
       <div>
-        <h2>Your family corner</h2>
+        <h2>Play &amp; learn</h2>
         <div class="cards">
-          <!-- When photos.reiyaameira.com is ready, change this <div> to <a href="https://photos.reiyaameira.com"> and remove "soon" + the badge -->
-          <div class="card photos soon">
-            <span class="badge">Coming soon</span>
-            <span class="emoji">📸</span>
-            <span class="title">Photos</span>
-            <span class="desc">All our family pictures</span>
-          </div>
-          <a class="card movies" href="https://jellyfin.reiyaameira.com:8443">
-            <span class="emoji">🍿</span>
-            <span class="title">Movies</span>
-            <span class="desc">Family movie night</span>
+          <a class="card lab" href="games/index.html">
+            <span class="emoji">🧪</span>
+            <span class="title">Reiya's Lab</span>
+            <span class="desc">Math &amp; science games</span>
           </a>
         </div>
       </div>
@@ -375,7 +403,7 @@
     </section>
   </main>
 
-  <footer>Made with love by your family 💕</footer>
+  <footer>Made with love by Amma and Appa 💕</footer>
 
   <script>
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

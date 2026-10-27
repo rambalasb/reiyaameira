@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mix the Colors</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .target { display: inline-flex; align-items: center; gap: 12px; }
+    .swatch { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(91, 42, 110, .2); }
+    .pots { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 8px 0 16px; }
+    .pot {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      box-shadow: 0 6px 0 rgba(91, 42, 110, .15);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pot:active { transform: scale(.92); }
+    .mixer { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1.8rem; font-weight: 700; }
+    .drop { width: 50px; height: 50px; border-radius: 50%; border: 3px dashed var(--lilac); background: #fff; }
+    .bowl {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 6px solid #fff;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(91, 42, 110, .15);
+      transition: background .8s;
+    }
+    .mix-name { font-size: 1.4rem; font-weight: 700; min-height: 1.6em; margin: 10px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🎨 Mix the Colors</h1>
+    <p class="sub">Tap two paint pots to mix them!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="question target" id="target"></p>
+      <div class="pots" id="pots"></div>
+      <div class="mixer">
+        <span class="drop" id="drop1"></span>+<span class="drop" id="drop2"></span>=<span class="bowl" id="bowl"></span>
+      </div>
+      <p class="mix-name" id="mixName"></p>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The game has a list of paint mixes, like "blue + yellow = green". When you pick two pots, it looks up the mix in the list and paints the bowl that color.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change: try adding new paints and mixes!
+    const PAINTS = [
+      { id: "red",    color: "#e63946" },
+      { id: "yellow", color: "#ffd60a" },
+      { id: "blue",   color: "#3a86ff" },
+      { id: "white",  color: "#ffffff" },
+      { id: "black",  color: "#343a40" },
+    ];
+    // The two paint names go in alphabetical order, joined with "+".
+    const MIXES = {
+      "red+yellow":   { name: "orange",       color: "#fb8500" },
+      "blue+yellow":  { name: "green",        color: "#52b788" },
+      "blue+red":     { name: "purple",       color: "#9d4edd" },
+      "red+white":    { name: "pink",         color: "#ff8fab" },
+      "blue+white":   { name: "light blue",   color: "#a2d2ff" },
+      "white+yellow": { name: "light yellow", color: "#fff3b0" },
+      "black+white":  { name: "gray",         color: "#adb5bd" },
+      "black+red":    { name: "dark red",     color: "#8d0801" },
+      "black+blue":   { name: "navy blue",    color: "#14213d" },
+      "black+yellow": { name: "olive green",  color: "#808000" },
+    };
+    const CHALLENGES = ["orange", "green", "purple", "pink", "light blue", "gray"];
+
+    const $ = id => document.getElementById(id);
+    let picks = [], todo = [], target = null, busy = false;
+
+    for (const paint of PAINTS) {
+      const pot = document.createElement("button");
+      pot.className = "pot";
+      pot.style.background = paint.color;
+      pot.setAttribute("aria-label", paint.id);
+      pot.title = paint.id;
+      pot.addEventListener("click", () => choose(paint));
+      $("pots").appendChild(pot);
+    }
+
+    function mix(a, b) {
+      if (a.id === b.id) return { name: a.id, color: a.color };
+      return MIXES[[a.id, b.id].sort().join("+")];
+    }
+
+    function start() {
+      todo = Lab.shuffle(CHALLENGES);
+      nextChallenge();
+    }
+
+    function nextChallenge() {
+      target = todo.shift() || null;
+      if (target) {
+        const color = Object.values(MIXES).find(m => m.name === target).color;
+        $("target").innerHTML = `Make <span class="swatch" style="background:${color}"></span> ${target}`;
+        $("score").textContent = `🎨 ${CHALLENGES.length - todo.length - 1} / ${CHALLENGES.length}`;
+      } else {
+        $("target").textContent = "Free painting time! 🖌️";
+        $("score").textContent = "Mix anything you like.";
+      }
+      clearMix();
+    }
+
+    function clearMix() {
+      picks = [];
+      busy = false;
+      $("drop1").style.background = $("drop2").style.background = $("bowl").style.background = "#fff";
+      $("mixName").textContent = "";
+    }
+
+    function choose(paint) {
+      if (busy) return;
+      picks.push(paint);
+      $(`drop${picks.length}`).style.background = paint.color;
+      if (picks.length < 2) return;
+
+      busy = true;
+      const result = mix(picks[0], picks[1]);
+      $("bowl").style.background = result.color;
+      $("mixName").textContent = `${picks[0].id} + ${picks[1].id} = ${result.name}!`;
+
+      if (!target) {
+        $("feedback").textContent = "";
+        setTimeout(clearMix, 1600);
+      } else if (result.name === target) {
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), "You made it! 🎉", true);
+        if (todo.length === 0) {
+          Lab.win("mix-colors");
+          setTimeout(() => { $("feedback").textContent = ""; nextChallenge(); }, 2000);
+        } else {
+          setTimeout(() => { $("feedback").textContent = ""; nextChallenge(); }, 1600);
+        }
+      } else {
+        Lab.sound("no");
+        Lab.feedback($("feedback"), `That made ${result.name}. Try again!`, false);
+        setTimeout(clearMix, 1600);
+      }
+    }
+
+    start();
+  </script>
+</body>
+</html>

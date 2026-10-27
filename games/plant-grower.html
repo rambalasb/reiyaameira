@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plant Grower</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .window {
+      max-width: 360px;
+      margin: 0 auto 12px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 6px solid #fff;
+      transition: background .6s;
+    }
+    .window.day { background: linear-gradient(#bfe6ff, #e9f7ff); }
+    .window.night { background: linear-gradient(#5b4a8a, #8a7bb8); }
+    .sky-icon { font-size: 2rem; text-align: right; margin: 0; }
+    .plant { font-size: 5rem; line-height: 1; margin: 0; min-height: 5rem; }
+    .pot { font-size: 3rem; line-height: 1; margin: -8px 0 0; }
+    .meters { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; text-align: left; max-width: 320px; margin: 0 auto 16px; font-size: 1.2rem; }
+    .meters b { font-weight: 600; }
+    .controls .btn { min-width: 140px; }
+    .tip { color: var(--ink-soft); margin: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🌱 Plant Grower</h1>
+    <p class="sub">Give your seed what it needs, one day at a time, until it flowers!</p>
+    <div class="panel">
+      <div class="window night" id="window">
+        <p class="sky-icon" id="skyIcon">🌙</p>
+        <p class="plant" id="plant"></p>
+        <p class="pot">🪴</p>
+      </div>
+      <div class="meters">
+        <b>Day</b><span id="day"></span>
+        <b>Water</b><span id="water"></span>
+        <b>Health</b><span id="health"></span>
+      </div>
+      <div class="row controls" id="controls">
+        <button class="btn" id="waterBtn">💧 Water</button>
+        <button class="btn" id="sunBtn">☀️ Open curtains</button>
+        <button class="btn primary" id="nextBtn">🌙 Next day</button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <p class="tip">Tip: plants need <strong>water</strong>, <strong>sunlight</strong> and <strong>time</strong>. But not too much water!</p>
+      <button class="btn primary hidden" id="again">Plant a new seed</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>Each night the game checks the plant. If it had some water (but not too much) and sunlight, it grows one step. If not, it loses a heart. The sun dries up the water a little each day.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const STAGES = ["🫘", "🌱", "🌿", "🪴", "🌷"];  // seed → flower
+    const MAX_WATER = 6;   // this much water is too soggy!
+    const HEARTS = 3;
+
+    const $ = id => document.getElementById(id);
+    let day, water, sunny, stage, health, over;
+
+    function start() {
+      day = 1;
+      water = 0;
+      sunny = false;
+      stage = 0;
+      health = HEARTS;
+      over = false;
+      $("again").classList.add("hidden");
+      $("controls").classList.remove("hidden");
+      $("feedback").textContent = "";
+      render();
+    }
+
+    function render() {
+      $("plant").textContent = health > 0 ? STAGES[stage] : "🥀";
+      $("day").textContent = day;
+      $("water").textContent = water ? "💧".repeat(water) : "empty";
+      $("health").textContent = "💚".repeat(health) + "🤍".repeat(HEARTS - health);
+      $("window").className = "window " + (sunny ? "day" : "night");
+      $("skyIcon").textContent = sunny ? "☀️" : "🌙";
+      $("sunBtn").textContent = sunny ? "🌙 Close curtains" : "☀️ Open curtains";
+    }
+
+    $("waterBtn").addEventListener("click", () => {
+      water = Math.min(MAX_WATER, water + 2);
+      Lab.feedback($("feedback"), water >= MAX_WATER ? "Whoa, that's a lot of water!" : "Glug glug 💧", water < MAX_WATER);
+      render();
+    });
+
+    $("sunBtn").addEventListener("click", () => {
+      sunny = !sunny;
+      $("feedback").textContent = "";
+      render();
+    });
+
+    $("nextBtn").addEventListener("click", () => {
+      if (over) return;
+      const problems = [];
+      if (water === 0) problems.push("it was thirsty 💧");
+      if (water >= MAX_WATER) problems.push("the soil was too soggy 🌊");
+      if (!sunny) problems.push("it needed sunlight ☀️");
+
+      if (problems.length) {
+        health--;
+        Lab.sound("no");
+        Lab.feedback($("feedback"), `Oh no, ${problems.join(" and ")}.`, false);
+      } else {
+        stage++;
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), "Your plant grew! 🌱", true);
+      }
+
+      day++;
+      water = Math.max(0, water - (sunny ? 2 : 1));  // the sun dries the soil
+
+      if (stage === STAGES.length - 1) {
+        over = true;
+        Lab.feedback($("feedback"), `It flowered on day ${day}! 🌷 You're a great gardener!`, true);
+        Lab.win("plant-grower");
+        endGame();
+      } else if (health === 0) {
+        over = true;
+        Lab.feedback($("feedback"), "Your plant wilted. 🥀 Let's try again!", false);
+        endGame();
+      }
+      render();
+    });
+
+    function endGame() {
+      $("controls").classList.add("hidden");
+      $("again").classList.remove("hidden");
+    }
+
+    $("again").addEventListener("click", start);
+    start();
+  </script>
+</body>
+</html>

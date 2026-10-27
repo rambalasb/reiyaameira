@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fraction Pizza</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .frac { display: inline-flex; flex-direction: column; vertical-align: middle; line-height: 1; margin: 0 6px; }
+    .frac span:first-child { border-bottom: 4px solid var(--ink); padding: 0 6px 4px; }
+    .frac span:last-child { padding-top: 4px; }
+    #pizza { width: min(300px, 80vw); height: auto; display: block; margin: 0 auto 12px; }
+    #pizza path { cursor: pointer; transition: fill .15s; }
+    #pizza path:focus-visible { outline: none; stroke: var(--pink-deep); stroke-width: 5; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🍕 Fraction Pizza</h1>
+    <p class="sub">Tap slices to put strawberry sauce on them!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="question" id="question"></p>
+      <svg id="pizza" viewBox="-100 -100 200 200" aria-label="Pizza"></svg>
+      <button class="btn primary" id="check">✓ Check</button>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The bottom number says how many slices the pizza is cut into. The top number says how many to color. The computer draws each slice by working out where the corners go around the circle.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const SLICES = [2, 3, 4, 6, 8];  // how many slices a pizza can have
+    const GOAL = 5;
+
+    const $ = id => document.getElementById(id);
+    const NS = "http://www.w3.org/2000/svg";
+    let topNumber = 0, bottomNumber = 0, picked = [], score = 0, done = false;
+
+    function slicePath(i, n, r) {
+      const a1 = (i / n) * 2 * Math.PI - Math.PI / 2;
+      const a2 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2;
+      const big = a2 - a1 > Math.PI ? 1 : 0;
+      return `M0 0 L${r * Math.cos(a1)} ${r * Math.sin(a1)} A${r} ${r} 0 ${big} 1 ${r * Math.cos(a2)} ${r * Math.sin(a2)} Z`;
+    }
+
+    function drawPizza() {
+      const pizza = $("pizza");
+      pizza.innerHTML = `<circle r="97" fill="#e9b25f"/>`;  // the crust
+      for (let i = 0; i < bottomNumber; i++) {
+        const slice = document.createElementNS(NS, "path");
+        slice.setAttribute("d", slicePath(i, bottomNumber, 86));
+        slice.setAttribute("stroke", "#d39a45");
+        slice.setAttribute("stroke-width", 3);
+        slice.setAttribute("tabindex", 0);
+        slice.setAttribute("role", "button");
+        const paint = () => slice.setAttribute("fill", picked[i] ? "#ff77b0" : "#ffe08a");
+        const toggle = () => { picked[i] = !picked[i]; paint(); };
+        slice.addEventListener("click", toggle);
+        slice.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+        paint();
+        pizza.appendChild(slice);
+      }
+    }
+
+    function newPizza() {
+      bottomNumber = Lab.pick(SLICES);
+      topNumber = Lab.rand(1, bottomNumber - 1);
+      picked = new Array(bottomNumber).fill(false);
+      $("question").innerHTML = `Color <span class="frac"><span>${topNumber}</span><span>${bottomNumber}</span></span>`;
+      $("feedback").textContent = "";
+      $("score").textContent = `🍕 ${score} / ${GOAL}`;
+      drawPizza();
+    }
+
+    $("check").addEventListener("click", () => {
+      if (done) return;
+      const count = picked.filter(Boolean).length;
+      if (count === topNumber) {
+        score++;
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), `Yum! ${topNumber} out of ${bottomNumber} slices 🎉`, true);
+        $("score").textContent = `🍕 ${score} / ${GOAL}`;
+        if (score === GOAL) {
+          done = true;
+          Lab.win("fraction-pizza");
+          $("again").classList.remove("hidden");
+        } else {
+          setTimeout(newPizza, 1200);
+        }
+      } else {
+        Lab.sound("no");
+        Lab.shake($("pizza"));
+        Lab.feedback($("feedback"), `You colored ${count}. We need ${topNumber} out of ${bottomNumber}.`, false);
+      }
+    });
+
+    $("again").addEventListener("click", () => {
+      score = 0;
+      done = false;
+      $("again").classList.add("hidden");
+      newPizza();
+    });
+
+    newPizza();
+  </script>
+</body>
+</html>

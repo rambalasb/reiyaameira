@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clock Matcher</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕒</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    #clock { width: min(280px, 80vw); height: auto; touch-action: none; cursor: grab; display: block; margin: 0 auto 12px; }
+    #clock text { font-family: "Fredoka", sans-serif; font-weight: 600; fill: var(--ink); user-select: none; }
+    .legend { color: var(--ink-soft); margin: 0 0 12px; }
+    .legend b.m { color: var(--pink-deep); }
+    .controls { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 16px; justify-content: center; align-items: center; margin-bottom: 12px; }
+    .controls span { font-weight: 600; }
+    .controls .btn { padding: 6px 14px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🕒 Clock Matcher</h1>
+    <p class="sub">Make the clock show the time. Drag the pink hand or use the buttons!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="question" id="question"></p>
+      <svg id="clock" viewBox="-100 -100 200 200" aria-label="Clock">
+        <circle r="96" fill="#fff" stroke="#c9a7ff" stroke-width="6"/>
+        <g id="ticks"></g>
+        <g id="nums"></g>
+        <line id="hourHand" x1="0" y1="8" x2="0" y2="-44" stroke="#5b2a6e" stroke-width="9" stroke-linecap="round"/>
+        <line id="minuteHand" x1="0" y1="10" x2="0" y2="-72" stroke="#ff77b0" stroke-width="5" stroke-linecap="round"/>
+        <circle r="6" fill="#5b2a6e"/>
+      </svg>
+      <p class="legend">Short purple hand = <b>hours</b> · Long pink hand = <b class="m">minutes</b></p>
+      <div class="controls">
+        <span>Hour</span>
+        <div class="row"><button class="btn" data-move="-60">−</button><button class="btn" data-move="60">+</button></div>
+        <span>Minutes</span>
+        <div class="row"><button class="btn" data-move="-5">−</button><button class="btn" data-move="5">+</button></div>
+      </div>
+      <button class="btn primary" id="check">✓ Check</button>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The clock counts the time in minutes. The minute hand turns 6 degrees for every minute, and the hour hand turns slowly too, just like a real clock. When you drag past the 12, the hour goes up by one.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const GOAL = 5;                          // how many times to get right
+    const EASY_MINUTES = [0, 15, 30, 45];    // o'clock, quarter past, half past, quarter to
+
+    const $ = id => document.getElementById(id);
+    const svg = $("clock");
+    const NS = "http://www.w3.org/2000/svg";
+    let mins = 0;     // the time on the clock, in minutes after 12:00 (0 to 719)
+    let target = 0;
+    let score = 0;
+    let done = false;
+
+    // draw the ticks and numbers
+    for (let i = 0; i < 60; i++) {
+      const a = i * 6 * Math.PI / 180;
+      const long = i % 5 === 0;
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", Math.sin(a) * (long ? 82 : 87));
+      line.setAttribute("y1", -Math.cos(a) * (long ? 82 : 87));
+      line.setAttribute("x2", Math.sin(a) * 91);
+      line.setAttribute("y2", -Math.cos(a) * 91);
+      line.setAttribute("stroke", long ? "#8a5a9c" : "#d9c7f0");
+      line.setAttribute("stroke-width", long ? 3 : 1.5);
+      $("ticks").appendChild(line);
+    }
+    for (let n = 1; n <= 12; n++) {
+      const a = n * 30 * Math.PI / 180;
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", Math.sin(a) * 68);
+      t.setAttribute("y", -Math.cos(a) * 68);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("dominant-baseline", "central");
+      t.setAttribute("font-size", 17);
+      t.textContent = n;
+      $("nums").appendChild(t);
+    }
+
+    function draw() {
+      $("hourHand").setAttribute("transform", `rotate(${mins / 2})`);       // 360° every 720 minutes
+      $("minuteHand").setAttribute("transform", `rotate(${(mins % 60) * 6})`);
+    }
+
+    function setMins(m) { mins = ((m % 720) + 720) % 720; draw(); }
+
+    function sayTime(total) {
+      const h = Math.floor(total / 60) || 12;
+      const m = total % 60;
+      const next = h % 12 + 1;
+      if (m === 0) return `${h} o'clock`;
+      if (m === 15) return `quarter past ${h}`;
+      if (m === 30) return `half past ${h}`;
+      if (m === 45) return `quarter to ${next}`;
+      return `${h}:${String(m).padStart(2, "0")}`;
+    }
+
+    function newTime() {
+      const h = Lab.rand(1, 12);
+      const m = Math.random() < 0.6 ? Lab.pick(EASY_MINUTES) : Lab.rand(0, 11) * 5;
+      target = (h % 12) * 60 + m;
+      if (target === mins) return newTime();
+      $("question").textContent = sayTime(target);
+      $("feedback").textContent = "";
+      $("score").textContent = `⭐ ${score} / ${GOAL}`;
+    }
+
+    // buttons
+    document.querySelectorAll("[data-move]").forEach(b =>
+      b.addEventListener("click", () => setMins(mins + Number(b.dataset.move))));
+
+    // dragging the minute hand
+    let dragging = false;
+    function angleOf(e) {
+      const r = svg.getBoundingClientRect();
+      const x = e.clientX - (r.left + r.width / 2);
+      const y = e.clientY - (r.top + r.height / 2);
+      return (Math.atan2(x, -y) * 180 / Math.PI + 360) % 360;
+    }
+    function dragTo(e) {
+      const minute = Math.round(angleOf(e) / 30) * 5 % 60;
+      let change = minute - mins % 60;
+      if (change > 30) change -= 60;     // went backwards past the 12
+      if (change < -30) change += 60;    // went forwards past the 12
+      setMins(mins + change);
+    }
+    svg.addEventListener("pointerdown", e => { dragging = true; svg.setPointerCapture(e.pointerId); dragTo(e); });
+    svg.addEventListener("pointermove", e => { if (dragging) dragTo(e); });
+    svg.addEventListener("pointerup", () => { dragging = false; });
+
+    $("check").addEventListener("click", () => {
+      if (done) return;
+      if (mins === target) {
+        score++;
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), `Yes! That's ${sayTime(target)} 🎉`, true);
+        $("score").textContent = `⭐ ${score} / ${GOAL}`;
+        if (score === GOAL) {
+          done = true;
+          Lab.win("clock-matcher");
+          $("again").classList.remove("hidden");
+        } else {
+          setTimeout(newTime, 1200);
+        }
+      } else {
+        Lab.sound("no");
+        Lab.shake(svg);
+        Lab.feedback($("feedback"), `Your clock says ${sayTime(mins)}. Try again!`, false);
+      }
+    });
+
+    $("again").addEventListener("click", () => {
+      score = 0;
+      done = false;
+      $("again").classList.add("hidden");
+      newTime();
+    });
+
+    draw();
+    newTime();
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spelling Bee</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .picture { font-size: 4.5rem; line-height: 1; min-height: 4.5rem; margin: 0; }
+    .blanks { font-size: 2rem; font-weight: 700; letter-spacing: 6px; margin: 8px 0 16px; }
+    .spell {
+      font: inherit;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--ink);
+      text-align: center;
+      width: 100%;
+      max-width: 320px;
+      padding: 8px 12px;
+      border: 3px solid var(--lilac);
+      border-radius: 18px;
+      margin-bottom: 14px;
+    }
+    .spell:focus { outline: none; border-color: var(--pink-deep); }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🐝 Spelling Bee</h1>
+    <p class="sub" id="intro">Press 🔊 to hear the word, then type it!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <p class="picture" id="picture"></p>
+      <p class="blanks" id="blanks"></p>
+      <form id="form">
+        <input class="spell" id="spell" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the word">
+        <div class="row">
+          <button type="button" class="btn" id="hear">🔊 Hear it</button>
+          <button type="button" class="btn" id="hint">💡 Hint</button>
+          <button type="submit" class="btn primary">✓ Check</button>
+        </div>
+      </form>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The browser has a voice built in that can read words out loud. The game says a word from the list, and checks if the letters you typed match.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change: put your own spelling words here!
+    const WORDS = [
+      { word: "cat", pic: "🐱" },     { word: "sun", pic: "☀️" },
+      { word: "fish", pic: "🐟" },    { word: "tree", pic: "🌳" },
+      { word: "star", pic: "⭐" },    { word: "apple", pic: "🍎" },
+      { word: "horse", pic: "🐴" },   { word: "cloud", pic: "☁️" },
+      { word: "rainbow", pic: "🌈" }, { word: "unicorn", pic: "🦄" },
+      { word: "rocket", pic: "🚀" },  { word: "flower", pic: "🌸" },
+      { word: "pizza", pic: "🍕" },   { word: "house", pic: "🏠" },
+      { word: "train", pic: "🚂" },   { word: "heart", pic: "💖" },
+      { word: "moon", pic: "🌙" },    { word: "snake", pic: "🐍" },
+      { word: "dragon", pic: "🐉" },  { word: "banana", pic: "🍌" },
+    ];
+    const ROUNDS = 8;
+
+    const $ = id => document.getElementById(id);
+    let list = [], turn = 0, score = 0, tries = 0, current, busy = false;
+
+    if (!Lab.canSpeak) {
+      $("hear").classList.add("hidden");
+      $("intro").textContent = "Look at the picture and spell the word!";
+    }
+
+    function start() {
+      list = Lab.shuffle(WORDS).slice(0, ROUNDS);
+      turn = 0;
+      score = 0;
+      $("form").classList.remove("hidden");
+      $("again").classList.add("hidden");
+      show();
+    }
+
+    function show() {
+      current = list[turn];
+      tries = 0;
+      busy = false;
+      $("picture").textContent = Lab.canSpeak ? "🐝" : current.pic;
+      $("blanks").textContent = "_ ".repeat(current.word.length).trim();
+      $("spell").value = "";
+      $("feedback").textContent = "";
+      $("score").textContent = `Word ${turn + 1} of ${ROUNDS} · ⭐ ${score}`;
+      Lab.say(`Spell ${current.word}`);
+      $("spell").focus();
+    }
+
+    $("hear").addEventListener("click", () => { Lab.say(current.word); $("spell").focus(); });
+
+    $("hint").addEventListener("click", () => {
+      $("picture").textContent = current.pic;
+      $("blanks").textContent = current.word[0].toUpperCase() + " _".repeat(current.word.length - 1);
+      $("spell").focus();
+    });
+
+    $("form").addEventListener("submit", e => {
+      e.preventDefault();
+      if (busy) return;
+      const typed = $("spell").value.trim().toLowerCase();
+      if (!typed) return;
+
+      if (typed === current.word) {
+        score++;
+        busy = true;
+        Lab.sound("yes");
+        Lab.say("Correct!");
+        $("picture").textContent = current.pic;
+        Lab.feedback($("feedback"), `Yes! ${current.word.toUpperCase()} 🐝`, true);
+        setTimeout(next, 1300);
+      } else if (++tries < 2) {
+        Lab.sound("no");
+        Lab.shake($("spell"));
+        Lab.feedback($("feedback"), "Not quite. Try once more! (Try 💡 for a hint)", false);
+      } else {
+        busy = true;
+        Lab.sound("no");
+        $("picture").textContent = current.pic;
+        Lab.say(`${current.word} is spelled ${current.word.split("").join(", ")}`);
+        Lab.feedback($("feedback"), `It's spelled ${current.word.toUpperCase().split("").join("-")}`, false);
+        setTimeout(next, 3000);
+      }
+    });
+
+    function next() {
+      turn++;
+      if (turn < ROUNDS) return show();
+      $("form").classList.add("hidden");
+      $("picture").textContent = "🏆";
+      $("blanks").textContent = "";
+      $("score").textContent = "";
+      Lab.feedback($("feedback"), `You spelled ${score} out of ${ROUNDS} words! 🎉`, true);
+      Lab.win("spelling-bee");
+      $("again").classList.remove("hidden");
+    }
+
+    $("again").addEventListener("click", start);
+    start();
+  </script>
+</body>
+</html>

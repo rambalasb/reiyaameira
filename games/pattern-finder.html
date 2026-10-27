@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pattern Finder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .sequence { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px 0 20px; }
+    .bead {
+      min-width: 52px;
+      height: 52px;
+      padding: 0 6px;
+      display: grid;
+      place-items: center;
+      font-size: 1.7rem;
+      font-weight: 700;
+      background: #fff;
+      border-radius: 14px;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 10px rgba(91, 42, 110, .1);
+    }
+    .bead.mystery { border: 3px dashed var(--pink-deep); color: var(--pink-deep); }
+    .options .btn { font-size: 1.8rem; min-width: 80px; padding: 10px 16px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🔮 Pattern Finder</h1>
+    <p class="sub">What comes next? Tap the answer!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <div class="sequence" id="sequence"></div>
+      <div class="row options" id="options"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>A pattern is a little group that repeats, like 🦄🌈 🦄🌈. The game picks a kind of pattern and some pictures, repeats it a few times, then hides the last one for you to find. Number patterns add the same amount each time.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const PICS = ["🦄", "🌈", "⭐", "🍓", "🐱", "🌸", "🍩", "🐬", "🎈", "🍉", "🦋", "🐸"];
+    const GOAL = 8;
+    // Each letter is a different picture. "AB" means 🦄🌈🦄🌈...
+    const REPEATS = { AB: [0, 1], ABC: [0, 1, 2], AAB: [0, 0, 1], ABB: [0, 1, 1] };
+
+    const $ = id => document.getElementById(id);
+    let score = 0, answer, done = false;
+
+    function makePattern() {
+      const kind = Lab.pick([...Object.keys(REPEATS), "numbers", "growing"]);
+
+      if (kind === "numbers") {
+        const step = Lab.pick([1, 2, 3, 5, 10]);
+        const first = Lab.rand(0, 10);
+        const seq = Array.from({ length: 6 }, (_, i) => first + i * step);
+        const ans = seq.pop();
+        const wrong = [...new Set([ans + step, ans + 1, ans - 1])].filter(n => n !== ans && n >= 0);
+        return { seq, ans, options: [ans, ...Lab.shuffle(wrong).slice(0, 2)] };
+      }
+
+      if (kind === "growing") {
+        const p = Lab.pick(PICS);
+        return { seq: [p, p.repeat(2), p.repeat(3)], ans: p.repeat(4), options: [p.repeat(4), p.repeat(3), p.repeat(5)] };
+      }
+
+      const unit = REPEATS[kind];
+      const pics = Lab.shuffle(PICS).slice(0, 3);
+      const seq = Array.from({ length: unit.length * 3 }, (_, i) => pics[unit[i % unit.length]]);
+      const ans = seq.pop();
+      const used = [...new Set(unit.map(i => pics[i]))];
+      const extra = Lab.pick(PICS.filter(p => !pics.includes(p)));
+      const wrong = [...used, extra].filter(p => p !== ans);
+      return { seq, ans, options: [ans, ...Lab.shuffle(wrong).slice(0, 2)] };
+    }
+
+    function show() {
+      const pattern = makePattern();
+      answer = pattern.ans;
+      $("sequence").innerHTML = "";
+      for (const item of [...pattern.seq, "?"]) {
+        const bead = document.createElement("div");
+        bead.className = item === "?" ? "bead mystery" : "bead";
+        bead.textContent = item;
+        $("sequence").appendChild(bead);
+      }
+      $("options").innerHTML = "";
+      for (const option of Lab.shuffle(pattern.options)) {
+        const btn = document.createElement("button");
+        btn.className = "btn";
+        btn.textContent = option;
+        btn.addEventListener("click", () => choose(btn, option));
+        $("options").appendChild(btn);
+      }
+      $("score").textContent = `⭐ ${score} / ${GOAL}`;
+      $("feedback").textContent = "";
+    }
+
+    function choose(btn, option) {
+      if (done) return;
+      if (option !== answer) {
+        Lab.sound("no");
+        Lab.shake(btn);
+        btn.disabled = true;
+        Lab.feedback($("feedback"), "Look again. What repeats?", false);
+        return;
+      }
+      done = true;
+      score++;
+      Lab.sound("yes");
+      document.querySelector(".mystery").textContent = answer;
+      document.querySelector(".mystery").classList.remove("mystery");
+      Lab.feedback($("feedback"), Lab.pick(["You found it! 🔮", "Pattern pro! ⭐", "Yes! 💖"]), true);
+      $("score").textContent = `⭐ ${score} / ${GOAL}`;
+      if (score === GOAL) {
+        Lab.win("pattern-finder");
+        $("again").classList.remove("hidden");
+      } else {
+        setTimeout(() => { done = false; show(); }, 1200);
+      }
+    }
+
+    $("again").addEventListener("click", () => {
+      score = 0;
+      done = false;
+      $("again").classList.add("hidden");
+      show();
+    });
+
+    show();
+  </script>
+</body>
+</html>

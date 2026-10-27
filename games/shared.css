@@ -1,0 +1,150 @@
+/* Shared look for every page in Reiya's Lab.
+   Each game page loads this with <link rel="stylesheet" href="shared.css">. */
+
+:root {
+  --ink: #5b2a6e;
+  --ink-soft: #8a5a9c;
+  --pink: #ff9ec7;
+  --pink-deep: #ff77b0;
+  --lilac: #c9a7ff;
+  --mint: #9ee6cf;
+  --sky: #a7d8ff;
+  --butter: #ffe08a;
+  --card: rgba(255, 255, 255, 0.75);
+  --good: #23946d;
+  --bad: #e0527f;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: "Fredoka", system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #fff0f7 0%, #f3e8ff 50%, #e3f3ff 100%) fixed;
+  min-height: 100vh;
+  text-align: center;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- top bar ---------- */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 14px 16px;
+}
+.back {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  background: #fff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--lilac);
+}
+.back:hover { background: #f8f0ff; }
+.stars {
+  font-weight: 600;
+  background: var(--butter);
+  padding: 6px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ---------- page parts ---------- */
+main { max-width: 720px; margin: 0 auto; padding: 4px 16px 16px; }
+
+h1 { font-size: clamp(2rem, 8vw, 3rem); margin: 4px 0; line-height: 1.1; }
+h2 { font-size: 1.5rem; margin: 0 0 12px; }
+.sub { color: var(--ink-soft); margin: 0 0 16px; font-size: 1.15rem; }
+
+.panel {
+  background: var(--card);
+  border: 3px solid #fff;
+  border-radius: 24px;
+  padding: 20px 16px;
+  box-shadow: 0 10px 24px rgba(91, 42, 110, .1);
+  margin-bottom: 16px;
+}
+
+.row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+.question { font-size: clamp(1.8rem, 9vw, 3.2rem); font-weight: 700; margin: 6px 0 12px; }
+.score { font-size: 1.2rem; font-weight: 600; color: var(--ink-soft); margin: 0 0 12px; }
+
+.feedback { min-height: 1.6em; font-size: 1.3rem; font-weight: 600; margin: 12px 0 0; }
+.feedback.good { color: var(--good); }
+.feedback.bad { color: var(--bad); }
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--lilac);
+  border-radius: 18px;
+  padding: 10px 18px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--lilac);
+  transition: transform .1s, box-shadow .1s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--lilac); }
+.btn:focus-visible { outline: 3px dashed var(--pink-deep); outline-offset: 3px; }
+.btn.primary { background: var(--pink-deep); border-color: var(--pink-deep); color: #fff; box-shadow: 0 4px 0 #d9558f; }
+.btn.picked { background: #f3e8ff; border-color: #b77cff; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+/* ---------- little animations ---------- */
+.shake { animation: shake .4s; }
+@keyframes shake {
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.pop-in { animation: popin .4s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes popin { from { opacity: 0; transform: scale(.6); } }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: 3px solid var(--pink);
+  border-radius: 20px;
+  padding: 14px 22px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(91, 42, 110, .2);
+  z-index: 20;
+}
+
+.lab-confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+
+/* ---------- "Made by" credits ---------- */
+.credits { max-width: 720px; margin: 0 auto; padding: 8px 16px 32px; color: var(--ink-soft); }
+.credits p { margin: 0 0 8px; }
+.credits details {
+  background: rgba(255, 255, 255, .6);
+  border-radius: 16px;
+  padding: 10px 16px;
+  text-align: left;
+}
+.credits summary { cursor: pointer; font-weight: 600; text-align: center; color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

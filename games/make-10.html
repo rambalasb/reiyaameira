@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Make 10</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔟</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 420px; margin: 0 auto; }
+    .numcard {
+      aspect-ratio: 3 / 4;
+      font: inherit;
+      font-size: clamp(1.8rem, 9vw, 2.8rem);
+      font-weight: 700;
+      color: var(--ink);
+      background: linear-gradient(160deg, #fff, #ffe3f0);
+      border: 3px solid #fff;
+      border-radius: 18px;
+      box-shadow: 0 6px 0 var(--pink);
+      cursor: pointer;
+      transition: transform .15s, opacity .3s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .numcard.picked { background: linear-gradient(160deg, #fff, #e9dcff); border-color: #b77cff; transform: translateY(-4px); }
+    .numcard.gone { opacity: .15; transform: scale(.85); pointer-events: none; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🔟 Make <span id="targetTitle">10</span></h1>
+    <p class="sub">Tap two cards that add up to <strong id="targetSub">10</strong>. Clear them all!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <div class="grid" id="grid"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>For each pair, the computer picks a number, then works out the partner number by doing 10 minus it. Then it mixes up all the cards.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const TARGET = 10;  // try 20 for a harder game!
+    const PAIRS = 6;    // how many pairs of cards
+
+    const grid = document.getElementById("grid");
+    const feedbackEl = document.getElementById("feedback");
+    const scoreEl = document.getElementById("score");
+    const againBtn = document.getElementById("again");
+    document.getElementById("targetTitle").textContent = TARGET;
+    document.getElementById("targetSub").textContent = TARGET;
+
+    let first = null, moves = 0, left = 0;
+
+    function deal() {
+      grid.innerHTML = "";
+      first = null;
+      moves = 0;
+      left = PAIRS;
+      feedbackEl.textContent = "";
+      againBtn.classList.add("hidden");
+      showScore();
+
+      const numbers = [];
+      for (let i = 0; i < PAIRS; i++) {
+        const a = Lab.rand(1, TARGET - 1);
+        numbers.push(a, TARGET - a);
+      }
+      for (const n of Lab.shuffle(numbers)) {
+        const card = document.createElement("button");
+        card.className = "numcard";
+        card.textContent = n;
+        card.addEventListener("click", () => choose(card, n));
+        grid.appendChild(card);
+      }
+    }
+
+    function choose(card, n) {
+      if (!first) {
+        first = { card, n };
+        card.classList.add("picked");
+        return;
+      }
+      if (first.card === card) {
+        card.classList.remove("picked");
+        first = null;
+        return;
+      }
+      moves++;
+      const sum = first.n + n;
+      first.card.classList.remove("picked");
+      if (sum === TARGET) {
+        first.card.classList.add("gone");
+        card.classList.add("gone");
+        left--;
+        Lab.sound("yes");
+        Lab.feedback(feedbackEl, `${first.n} + ${n} = ${TARGET} ✨`, true);
+      } else {
+        Lab.sound("no");
+        Lab.shake(first.card);
+        Lab.shake(card);
+        Lab.feedback(feedbackEl, `${first.n} + ${n} = ${sum}, not ${TARGET}`, false);
+      }
+      first = null;
+      showScore();
+
+      if (left === 0) {
+        const { best, isNew } = Lab.best(`make-${TARGET}`, moves, true);
+        Lab.feedback(feedbackEl, isNew ? `All clear in ${moves} moves, your best ever! 🎉` : `All clear in ${moves} moves! Best: ${best}`, true);
+        Lab.win("make-10");
+        againBtn.classList.remove("hidden");
+      }
+    }
+
+    function showScore() { scoreEl.textContent = `Pairs left: ${left} · Moves: ${moves}`; }
+
+    againBtn.addEventListener("click", deal);
+    deal();
+  </script>
+</body>
+</html>

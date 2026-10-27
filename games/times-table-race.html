@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Times-Table Race</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .race-top { display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 700; }
+    .answer {
+      min-height: 64px;
+      max-width: 220px;
+      margin: 0 auto 16px;
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: #fff;
+      border: 3px solid var(--lilac);
+      border-radius: 18px;
+      padding: 4px;
+    }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
+    .keypad .btn { font-size: 1.6rem; padding: 12px 0; }
+    .tables .btn { min-width: 64px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🏁 Times-Table Race</h1>
+    <p class="sub">Answer as many as you can before the timer runs out!</p>
+
+    <div class="panel" id="setup">
+      <h2>Which times table?</h2>
+      <div class="row tables" id="tables"></div>
+      <p class="sub" style="margin:16px 0 0">Get 10 right to win the sticker.</p>
+    </div>
+
+    <div class="panel hidden" id="play">
+      <div class="race-top"><span id="timer"></span><span id="scoreEl"></span></div>
+      <p class="question" id="question"></p>
+      <div class="answer" id="answerBox"></div>
+      <div class="keypad" id="keypad"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+    </div>
+
+    <div class="panel hidden" id="done">
+      <p class="question" id="final"></p>
+      <p class="sub" id="doneNote"></p>
+      <button class="btn primary" id="again">Race again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>A timer counts down from 60 once every second. Each question uses the times table you picked and a random number from 1 to 12. Your best score for each table is saved on this computer.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const SECONDS = 60;     // how long the race lasts
+    const WIN_SCORE = 10;   // how many right answers win the sticker
+    const TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    const $ = id => document.getElementById(id);
+    let table, score, typed, a, b, timeLeft, timerId;
+
+    // the table buttons
+    for (const t of [...TABLES, "mix"]) {
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = t === "mix" ? "🎲 Mix" : `× ${t}`;
+      btn.addEventListener("click", () => start(t));
+      $("tables").appendChild(btn);
+    }
+
+    // the keypad buttons
+    for (const key of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"]) {
+      const btn = document.createElement("button");
+      btn.className = key === "✓" ? "btn primary" : "btn";
+      btn.textContent = key;
+      btn.addEventListener("click", () => press(key));
+      $("keypad").appendChild(btn);
+    }
+
+    function start(t) {
+      table = t;
+      score = 0;
+      timeLeft = SECONDS;
+      $("setup").classList.add("hidden");
+      $("done").classList.add("hidden");
+      $("play").classList.remove("hidden");
+      $("feedback").textContent = "";
+      next();
+      updateTop();
+      timerId = setInterval(tick, 1000);
+    }
+
+    function next() {
+      if (table === "mix") { a = Lab.rand(2, 12); b = Lab.rand(1, 12); }
+      else { a = table; b = Lab.rand(1, 12); if (Math.random() < 0.5) [a, b] = [b, a]; }
+      typed = "";
+      $("question").textContent = `${a} × ${b}`;
+      $("answerBox").textContent = "";
+    }
+
+    function press(key) {
+      if (/\d/.test(key) && typed.length < 3) typed += key;
+      else if (key === "⌫") typed = typed.slice(0, -1);
+      else if (key === "✓") return check();
+      $("answerBox").textContent = typed;
+    }
+
+    function check() {
+      if (!typed) return;
+      if (Number(typed) === a * b) {
+        score++;
+        Lab.sound("yes");
+        Lab.feedback($("feedback"), `${a} × ${b} = ${a * b} ✓`, true);
+      } else {
+        Lab.sound("no");
+        Lab.shake($("answerBox"));
+        Lab.feedback($("feedback"), `Oops: ${a} × ${b} = ${a * b}`, false);
+      }
+      updateTop();
+      next();
+    }
+
+    function tick() {
+      timeLeft--;
+      updateTop();
+      if (timeLeft <= 0) finish();
+    }
+
+    function updateTop() {
+      $("timer").textContent = `⏱️ ${timeLeft}`;
+      $("scoreEl").textContent = `⭐ ${score}`;
+    }
+
+    function finish() {
+      clearInterval(timerId);
+      $("play").classList.add("hidden");
+      $("done").classList.remove("hidden");
+      const name = table === "mix" ? "the mix" : `the ${table} times table`;
+      const { best, isNew } = Lab.best(`times-${table}`, score);
+      $("final").textContent = `You got ${score}! ${score >= WIN_SCORE ? "🎉" : "💪"}`;
+      $("doneNote").textContent = isNew
+        ? `That's your best ever for ${name}!`
+        : `Your best for ${name} is ${best}. ${score >= WIN_SCORE ? "" : `Get ${WIN_SCORE} to win the sticker!`}`;
+      if (score >= WIN_SCORE) Lab.win("times-table-race");
+    }
+
+    $("again").addEventListener("click", () => {
+      $("done").classList.add("hidden");
+      $("setup").classList.remove("hidden");
+    });
+
+    // typing on a keyboard works too
+    document.addEventListener("keydown", e => {
+      if ($("play").classList.contains("hidden")) return;
+      if (/^\d$/.test(e.key)) press(e.key);
+      else if (e.key === "Backspace") press("⌫");
+      else if (e.key === "Enter") press("✓");
+    });
+  </script>
+</body>
+</html>

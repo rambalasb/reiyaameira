@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Pop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .pond {
+      --size: clamp(60px, 17vw, 84px);
+      position: relative;
+      height: 360px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: linear-gradient(#e3f3ff, #bfe1ff);
+    }
+    .bubble {
+      position: absolute;
+      bottom: calc(var(--size) * -1.1);
+      width: var(--size);
+      height: var(--size);
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: radial-gradient(circle at 30% 30%, #fff, var(--sky) 55%, #7fc3ff);
+      color: var(--ink);
+      font: inherit;
+      font-size: 1.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      animation: rise linear forwards;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bubble.nope { background: radial-gradient(circle at 30% 30%, #fff, var(--pink) 60%, var(--pink-deep)); }
+    @keyframes rise { to { transform: translateY(-480px); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pond { height: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 16px; }
+      .bubble { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🫧 Number Pop</h1>
+    <p class="sub">Pop the bubble that has the answer!</p>
+    <div class="panel">
+      <p class="question" id="question"></p>
+      <p class="score" id="score"></p>
+      <div class="pond" id="pond"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="btn primary hidden" id="again">Play again</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>The computer picks two random numbers and works out the answer. Then it makes three wrong answers that are close by, so it's tricky! Each bubble floats up at its own speed.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change:
+    const BIGGEST = 20;        // the biggest number in the questions
+    const SIGNS = ["+", "-"];  // add "×" to practise times tables too!
+    const GOAL = 10;           // how many bubbles to pop to win
+
+    const questionEl = document.getElementById("question");
+    const scoreEl = document.getElementById("score");
+    const pond = document.getElementById("pond");
+    const feedbackEl = document.getElementById("feedback");
+    const againBtn = document.getElementById("again");
+
+    let score = 0;
+    let answer = 0;
+    let round = 0;
+    let locked = false;
+
+    function makeQuestion() {
+      const sign = Lab.pick(SIGNS);
+      let a, b;
+      if (sign === "+") {
+        answer = Lab.rand(2, BIGGEST);
+        a = Lab.rand(1, answer - 1);
+        b = answer - a;
+      } else if (sign === "-") {
+        a = Lab.rand(2, BIGGEST);
+        b = Lab.rand(1, a);
+        answer = a - b;
+      } else {
+        a = Lab.rand(2, 10);
+        b = Lab.rand(2, 10);
+        answer = a * b;
+      }
+      questionEl.textContent = `${a} ${sign} ${b} = ?`;
+    }
+
+    function wrongAnswers() {
+      const wrong = new Set();
+      while (wrong.size < 3) {
+        const n = answer + Lab.pick([-1, 1]) * Lab.rand(1, 5);
+        if (n >= 0 && n !== answer) wrong.add(n);
+      }
+      return [...wrong];
+    }
+
+    function newRound() {
+      round++;
+      const thisRound = round;
+      locked = false;
+      pond.innerHTML = "";
+      makeQuestion();
+
+      const numbers = Lab.shuffle([answer, ...wrongAnswers()]);
+      const lanes = Lab.shuffle([0, 1, 2, 3]);
+      numbers.forEach((n, i) => {
+        const bubble = document.createElement("button");
+        bubble.className = "bubble";
+        bubble.textContent = n;
+        bubble.style.left = `calc(${lanes[i] * 25}% + (25% - var(--size)) / 2)`;
+        bubble.style.animationDuration = Lab.rand(70, 100) / 10 + "s";
+        bubble.style.animationDelay = i * 0.5 + "s";
+        bubble.addEventListener("click", () => tap(bubble, n));
+        bubble.addEventListener("animationend", () => {
+          if (thisRound !== round) return;
+          bubble.remove();
+          if (n === answer) {
+            Lab.feedback(feedbackEl, "Oops, it floated away! Here's a new one.", false);
+            newRound();
+          }
+        });
+        pond.appendChild(bubble);
+      });
+    }
+
+    function pop(bubble) {
+      const now = getComputedStyle(bubble).transform;
+      bubble.style.animation = "none";
+      bubble.style.transform = now;
+      requestAnimationFrame(() => {
+        bubble.style.transition = "transform .25s, opacity .25s";
+        bubble.style.transform = (now === "none" ? "" : now) + " scale(1.6)";
+        bubble.style.opacity = 0;
+      });
+    }
+
+    function tap(bubble, n) {
+      if (locked) return;
+      if (n !== answer) {
+        Lab.sound("no");
+        bubble.classList.add("nope");
+        Lab.feedback(feedbackEl, `Not ${n}. Try again!`, false);
+        return;
+      }
+      locked = true;
+      score++;
+      Lab.sound("yes");
+      pop(bubble);
+      Lab.feedback(feedbackEl, Lab.pick(["Pop! 🎉", "Yes! ⭐", "You got it! 💖", "Super! 🌈"]), true);
+      showScore();
+      if (score === GOAL) {
+        round++;
+        setTimeout(() => { pond.innerHTML = ""; }, 300);
+        questionEl.textContent = "You did it! 🎉";
+        Lab.win("number-pop");
+        againBtn.classList.remove("hidden");
+      } else {
+        setTimeout(newRound, 500);
+      }
+    }
+
+    function showScore() { scoreEl.textContent = `⭐ ${score} / ${GOAL}`; }
+
+    function start() {
+      score = 0;
+      showScore();
+      feedbackEl.textContent = "";
+      againBtn.classList.add("hidden");
+      newRound();
+    }
+
+    againBtn.addEventListener("click", start);
+    start();
+  </script>
+</body>
+</html>

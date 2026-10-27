@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feed the Animal</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦁</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .animal {
+      display: inline-block;
+      font-size: 5rem;
+      line-height: 1;
+      padding: 12px;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      position: relative;
+      z-index: 2;
+    }
+    .animal.dragging { cursor: grabbing; }
+    .animal-name { font-size: 1.5rem; font-weight: 700; margin: 0 0 16px; }
+    .bins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .bin {
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      border: 3px dashed var(--lilac);
+      border-radius: 20px;
+      padding: 14px 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bin.over { background: #f3e8ff; border-style: solid; }
+    .bin .icon { font-size: 2.2rem; display: block; }
+    .bin b { display: block; font-size: 1.05rem; }
+    .bin small { color: var(--ink-soft); font-size: .9rem; }
+    .fact { font-size: 1.1rem; margin: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="index.html">← Reiya's Lab</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1>🦁 Feed the Animal</h1>
+    <p class="sub">Drag the animal to what it eats, or just tap the right box!</p>
+    <div class="panel">
+      <p class="score" id="score"></p>
+      <div class="animal" id="animal"></div>
+      <p class="animal-name" id="animalName"></p>
+      <div class="bins">
+        <button class="bin" data-diet="herbivore"><span class="icon">🌿</span><b>Herbivore</b><small>eats plants</small></button>
+        <button class="bin" data-diet="carnivore"><span class="icon">🍖</span><b>Carnivore</b><small>eats meat</small></button>
+        <button class="bin" data-diet="omnivore"><span class="icon">🍽️</span><b>Omnivore</b><small>eats both</small></button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <p class="fact" id="fact"></p>
+      <button class="btn primary hidden" id="next">Next ➡️</button>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Made by <strong>Reiya</strong> &amp; family · 2026</p>
+    <details>
+      <summary>📝 How I made this</summary>
+      <!-- Reiya: write this part in your own words! -->
+      <p>When you let go of the animal, the game checks which box your finger is over. Every animal in the list knows if it is a herbivore, carnivore or omnivore, and has a fun fact.</p>
+    </details>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // 🎨 Things you can change: add more animals!
+    const ANIMALS = [
+      { emoji: "🐄", name: "cow",       diet: "herbivore", fact: "Cows eat grass all day, and their stomach has four parts!" },
+      { emoji: "🐰", name: "rabbit",    diet: "herbivore", fact: "Rabbits munch grass, leaves and veggies." },
+      { emoji: "🦒", name: "giraffe",   diet: "herbivore", fact: "Giraffes use their long necks to reach leaves high in trees." },
+      { emoji: "🐘", name: "elephant",  diet: "herbivore", fact: "An elephant can eat over 100 kg of plants in one day!" },
+      { emoji: "🐨", name: "koala",     diet: "herbivore", fact: "Koalas eat almost nothing but eucalyptus leaves." },
+      { emoji: "🦓", name: "zebra",     diet: "herbivore", fact: "Zebras spend most of the day eating grass." },
+      { emoji: "🦁", name: "lion",      diet: "carnivore", fact: "Lions hunt animals like zebras and antelopes." },
+      { emoji: "🐯", name: "tiger",     diet: "carnivore", fact: "Tigers are the biggest cats, and they only eat meat." },
+      { emoji: "🦈", name: "shark",     diet: "carnivore", fact: "Sharks eat fish, seals and other sea animals." },
+      { emoji: "🦉", name: "owl",       diet: "carnivore", fact: "Owls hunt mice and insects at night." },
+      { emoji: "🐊", name: "crocodile", diet: "carnivore", fact: "Crocodiles eat fish, birds and other animals." },
+      { emoji: "🐍", name: "snake",     diet: "carnivore", fact: "Snakes swallow their food whole!" },
+      { emoji: "🐻", name: "bear",      diet: "omnivore",  fact: "Bears eat berries, honey, fish… almost anything!" },
+      { emoji: "🐷", name: "pig",       diet: "omnivore",  fact: "Pigs eat plants, roots, bugs and more." },
+      { emoji: "🐔", name: "chicken",   diet: "omnivore",  fact: "Chickens peck at seeds, and also worms and bugs." },
+      { emoji: "🦝", name: "raccoon",   diet: "omnivore",  fact: "Raccoons eat fruit, nuts, fish, and even food from bins!" },
+      { emoji: "🐒", name: "monkey",    diet: "omnivore",  fact: "Many monkeys eat fruit, leaves and insects." },
+    ];
+    const ROUNDS = 10;
+
+    const $ = id => document.getElementById(id);
+    const animalEl = $("animal");
+    const bins = [...document.querySelectorAll(".bin")];
+    let list = [], turn = 0, score = 0, current, answered = false;
+
+    function start() {
+      list = Lab.shuffle(ANIMALS).slice(0, ROUNDS);
+      turn = 0;
+      score = 0;
+      show();
+    }
+
+    function show() {
+      current = list[turn];
+      answered = false;
+      animalEl.textContent = current.emoji;
+      animalEl.classList.remove("hidden");
+      $("animalName").textContent = `The ${current.name}`;
+      $("score").textContent = `Animal ${turn + 1} of ${ROUNDS} · ⭐ ${score}`;
+      $("feedback").textContent = "";
+      $("fact").textContent = "";
+      $("next").classList.add("hidden");
+    }
+
+    function answer(diet) {
+      if (answered) return;
+      if (diet !== current.diet) {
+        Lab.sound("no");
+        Lab.shake(animalEl);
+        Lab.feedback($("feedback"), `Hmm, not a ${diet}. Try another box!`, false);
+        return;
+      }
+      answered = true;
+      score++;
+      Lab.sound("yes");
+      Lab.feedback($("feedback"), `Yes! The ${current.name} is a ${diet}. ${current.emoji}`, true);
+      $("fact").textContent = current.fact;
+      $("score").textContent = `Animal ${turn + 1} of ${ROUNDS} · ⭐ ${score}`;
+      $("next").textContent = turn + 1 === ROUNDS ? "Finish 🏁" : "Next ➡️";
+      $("next").classList.remove("hidden");
+    }
+
+    bins.forEach(bin => bin.addEventListener("click", () => answer(bin.dataset.diet)));
+
+    // ---------- dragging ----------
+    let startX = 0, startY = 0, dragging = false;
+    const binAt = (x, y) => bins.find(b => {
+      const r = b.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    });
+
+    animalEl.addEventListener("pointerdown", e => {
+      if (answered) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      animalEl.classList.add("dragging");
+      animalEl.setPointerCapture(e.pointerId);
+    });
+    animalEl.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      animalEl.style.transform = `translate(${e.clientX - startX}px, ${e.clientY - startY}px)`;
+      bins.forEach(b => b.classList.toggle("over", b === binAt(e.clientX, e.clientY)));
+    });
+    animalEl.addEventListener("pointerup", e => {
+      if (!dragging) return;
+      dragging = false;
+      animalEl.classList.remove("dragging");
+      animalEl.style.transform = "";
+      bins.forEach(b => b.classList.remove("over"));
+      const bin = binAt(e.clientX, e.clientY);
+      if (bin) answer(bin.dataset.diet);
+    });
+
+    $("next").addEventListener("click", () => {
+      turn++;
+      if (turn < ROUNDS) return show();
+      $("next").classList.add("hidden");
+      animalEl.classList.add("hidden");
+      $("animalName").textContent = "All the animals are fed! 🎉";
+      $("feedback").textContent = "";
+      $("fact").textContent = "";
+      Lab.win("feed-the-animal");
+      const again = document.createElement("button");
+      again.className = "btn primary";
+      again.textContent = "Feed more animals";
+      again.addEventListener("click", () => { again.remove(); start(); });
+      $("fact").after(again);
+    });
+
+    start();
+  </script>
+</body>
+</html>

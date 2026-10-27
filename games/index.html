@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reiya's Lab</title>
+  <meta name="description" content="Math, science and puzzle games made by Reiya.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    main { max-width: 900px; }
+
+    .lab-title .name {
+      background: linear-gradient(90deg, var(--pink-deep), #b77cff, #5bb8ff, var(--pink-deep));
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 6s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: 300% 0; } }
+
+    .fact { font-size: 1.25rem; margin: 0; }
+    .fact-label { font-weight: 700; color: var(--pink-deep); display: block; margin-bottom: 6px; }
+
+    /* ---------- sticker book ---------- */
+    .sticker-book { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; margin-top: 8px; }
+    .sticker {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      font-size: 2.2rem;
+      border-radius: 18px;
+      background: #fff;
+      border: 3px dashed var(--lilac);
+    }
+    .sticker.got { border-style: solid; border-color: var(--butter); background: #fffaf0; }
+    .sticker.missing { color: var(--lilac); font-size: 1.6rem; }
+
+    /* ---------- game tiles ---------- */
+    .section { text-align: left; margin: 28px 0 12px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+    .tile {
+      position: relative;
+      display: block;
+      padding: 18px 12px;
+      border-radius: 22px;
+      background: var(--card);
+      border: 3px solid #fff;
+      color: inherit;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(91, 42, 110, .1);
+      transition: transform .2s;
+    }
+    .tile:hover, .tile:focus-visible { transform: translateY(-4px) rotate(-1deg); }
+    .tile .emoji { font-size: 2.6rem; display: block; }
+    .tile .title { font-size: 1.15rem; font-weight: 700; display: block; margin: 4px 0 2px; }
+    .tile .desc { color: var(--ink-soft); font-size: .95rem; display: block; }
+    .tile .earned { position: absolute; top: -10px; right: -6px; font-size: 1.6rem; }
+    .tile.math    { background: linear-gradient(160deg, #fff, #ffe3f0); }
+    .tile.science { background: linear-gradient(160deg, #fff, #dff7ee); }
+    .tile.words   { background: linear-gradient(160deg, #fff, #e3f0ff); }
+
+    .scratch-spot {
+      border: 3px dashed var(--lilac);
+      border-radius: 20px;
+      padding: 24px 16px;
+      color: var(--ink-soft);
+    }
+    .scratch-frame { width: 100%; max-width: 485px; aspect-ratio: 485 / 402; border: 0; border-radius: 16px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="../index.html">← Home</a>
+    <span class="stars" data-sticker-count></span>
+  </header>
+
+  <main>
+    <h1 class="lab-title">🧪 <span class="name">Reiya's Lab</span></h1>
+    <p class="sub">Games about numbers, science and puzzles. Finish a game to win its sticker!</p>
+
+    <div class="panel">
+      <p class="fact"><span class="fact-label">💡 Fact of the Day</span><span id="fact"></span></p>
+    </div>
+
+    <div class="panel">
+      <h2>🏅 My Sticker Book</h2>
+      <p class="sub" id="stickerNote"></p>
+      <div class="sticker-book" id="stickerBook"></div>
+    </div>
+
+    <h2 class="section">🔢 Math</h2>
+    <div class="tiles" data-type="math"></div>
+
+    <h2 class="section">🔬 Science</h2>
+    <div class="tiles" data-type="science"></div>
+
+    <h2 class="section">🧩 Words &amp; Puzzles</h2>
+    <div class="tiles" data-type="words"></div>
+
+    <h2 class="section">🐱 My Scratch Games</h2>
+    <div class="panel">
+      <!--
+        To show a Scratch game here:
+        1. Make it at scratch.mit.edu and click "Share".
+        2. Copy the number from its web address, e.g. scratch.mit.edu/projects/123456789
+        3. Delete the "scratch-spot" div below and paste this, using your number:
+           <iframe class="scratch-frame" src="https://scratch.mit.edu/projects/123456789/embed" allowfullscreen></iframe>
+      -->
+      <div class="scratch-spot">
+        <p style="font-size:2.4rem;margin:0">🐱</p>
+        <p>Your first Scratch game will go here!<br>Make one at <strong>scratch.mit.edu</strong>.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="credits">
+    <p>🎨 Reiya's Lab, made by <strong>Reiya</strong> &amp; family</p>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script>
+    // ---------- Fact of the Day ----------
+    // Reiya: add your own facts to this list! A new one shows up each day.
+    const FACTS = [
+      "An octopus has three hearts and blue blood. 🐙",
+      "Honey never goes bad. People found 3,000-year-old honey that was still good to eat! 🍯",
+      "A day on Venus is longer than a year on Venus. 🪐",
+      "Butterflies taste with their feet. 🦋",
+      "Your bones are stronger than steel of the same weight. 🦴",
+      "Sloths can hold their breath for 40 minutes, longer than dolphins can! 🦥",
+      "Lightning is about five times hotter than the surface of the Sun. ⚡",
+      "A group of flamingos is called a flamboyance. 🦩",
+      "Bananas are berries, but strawberries aren't! 🍌",
+      "The Moon is slowly moving away from Earth, about 4 cm every year. 🌙",
+      "Sea otters hold hands when they sleep so they don't float apart. 🦦",
+      "There are more stars in space than grains of sand on all of Earth's beaches. ✨",
+      "A snail can sleep for three years. 🐌",
+      "Hummingbirds are the only birds that can fly backwards. 🐦",
+      "Water can be ice, liquid and steam: a solid, a liquid and a gas. 💧",
+    ];
+    const today = Math.floor(Date.now() / 86400000);
+    document.getElementById("fact").textContent = FACTS[today % FACTS.length];
+
+    // ---------- sticker book ----------
+    const got = Lab.stickers();
+    const book = document.getElementById("stickerBook");
+    let count = 0;
+    for (const game of GAMES) {
+      const s = document.createElement("div");
+      if (got[game.id]) {
+        count++;
+        s.className = "sticker got";
+        s.textContent = game.sticker;
+        s.title = `${game.title} ✓`;
+      } else {
+        s.className = "sticker missing";
+        s.textContent = "?";
+        s.title = `Finish ${game.title} to win this sticker`;
+      }
+      book.appendChild(s);
+    }
+    document.getElementById("stickerNote").textContent =
+      count === GAMES.length ? "You collected every sticker! 🎉" : `You have ${count} of ${GAMES.length} stickers.`;
+
+    // ---------- game tiles ----------
+    for (const game of GAMES) {
+      const tile = document.createElement("a");
+      tile.className = `tile ${game.type}`;
+      tile.href = `${game.id}.html`;
+      tile.innerHTML = `
+        ${got[game.id] ? `<span class="earned" title="Sticker won">${game.sticker}</span>` : ""}
+        <span class="emoji">${game.emoji}</span>
+        <span class="title">${game.title}</span>
+        <span class="desc">${game.desc}</span>`;
+      document.querySelector(`.tiles[data-type="${game.type}"]`).appendChild(tile);
+    }
+  </script>
+</body>
+</html>
